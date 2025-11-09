@@ -63,7 +63,8 @@ const MAIN_SECTIONS = [
           { id: 4, label: '1' },
           { id: 5, label: '2' },
           { id: 6, label: '3' },
-          { id: 7, label: '4' }
+          { id: 7, label: '4' },
+          { id: 13, label: '5' }
         ]
       },
       {
@@ -94,6 +95,16 @@ const MAIN_SECTIONS = [
           { id: 2, label: '2' },
           { id: 3, label: '3' },
           { id: 12, label: '4' }
+        ]
+      },
+      {
+        id: 'ondulado',
+        title: 'Ondulado',
+        icon: GiHairStrands,
+        options: [
+          { id: 14, label: '1' },
+          { id: 15, label: '2' },
+          { id: 16, label: '3' }
         ]
       }
     ]
@@ -164,21 +175,55 @@ function Home() {
   const hair0 = useGLTF('/models/female/GHair_0.glb')
   const hair1 = useGLTF('/models/female/GHair_1.glb')
   const hair2 = useGLTF('/models/female/GHair_2.glb')
-  // Cultural hairs (Cultural_0 .. Cultural_3) -> ids 4..7
+  // Cultural hairs (Cultural_0 .. Cultural_3 + Cultural_4) -> ids 4..7 and 13
   const culturalHair0 = useGLTF('/models/female/Hair(FEMALE)/Cultural/Cultural_0.glb')
   const culturalHair1 = useGLTF('/models/female/Hair(FEMALE)/Cultural/Cultural_1.glb')
   const culturalHair2 = useGLTF('/models/female/Hair(FEMALE)/Cultural/Cultural_2.glb')
   const culturalHair3 = useGLTF('/models/female/Hair(FEMALE)/Cultural/Cultural_3.glb')
+  const culturalHair4 = useGLTF('/models/female/Hair(FEMALE)/Cultural/Cultural_4.glb')
   // Cacheado (ids 8..9)
   const cacheado0 = useGLTF('/models/female/Hair(FEMALE)/Cacheado/Cacheado_0.glb')
   const cacheado1 = useGLTF('/models/female/Hair(FEMALE)/Cacheado/Cacheado_1.glb')
   // Crespo (ids 10..11)
   const crespo0 = useGLTF('/models/female/Hair(FEMALE)/Crespo/Crespo_0.glb')
   const crespo1 = useGLTF('/models/female/Hair(FEMALE)/Crespo/Crespo_1.glb')
-  // Liso (ids 12)
+  // Carregar textura do Crespo_1
+  const crespo1Texture = useMemo(() => {
+    const loader = new THREE.TextureLoader()
+    const texture = loader.load('/models/female/Hair(FEMALE)/Crespo/Crespo_1.png')
+    texture.flipY = false
+    texture.encoding = THREE.sRGBEncoding
+    texture.colorSpace = THREE.SRGBColorSpace
+    return texture
+  }, [])
+  // Liso (ids 1..3 and 12)
   const liso0 = useGLTF('/models/female/Hair(FEMALE)/Liso/Liso_0.glb')
+  // Ondulado (ids 14..16)
+  const ondulado0 = useGLTF('/models/female/Hair(FEMALE)/Ondulado/Ondulado_0.glb')
+  const ondulado1 = useGLTF('/models/female/Hair(FEMALE)/Ondulado/Ondulado_1.glb')
+  const ondulado2 = useGLTF('/models/female/Hair(FEMALE)/Ondulado/Ondulado_2.glb')
 
   // Ensure all materials (body and hair) respect alpha/transparency. Run once when GLTFs load/change.
+  // Effect para aplicar a textura ao modelo Crespo_1
+  useEffect(() => {
+    if (crespo1 && crespo1.scene && crespo1Texture) {
+      crespo1.scene.traverse((child) => {
+        if (child.isMesh) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material]
+          materials.forEach((mat) => {
+            if (!mat) return
+            mat.map = crespo1Texture
+            mat.transparent = true
+            mat.alphaTest = 0.7
+            mat.depthWrite = true
+            mat.side = THREE.DoubleSide
+            mat.needsUpdate = true
+          })
+        }
+      })
+    }
+  }, [crespo1, crespo1Texture])
+
   useEffect(() => {
     const gltfs = [
       // Include body models
@@ -187,10 +232,11 @@ function Home() {
       face0, face1, face2,
       // Hair models
       hair0, hair1, hair2,
-      culturalHair0, culturalHair1, culturalHair2, culturalHair3,
+      culturalHair0, culturalHair1, culturalHair2, culturalHair3, culturalHair4,
       cacheado0, cacheado1,
       crespo0, crespo1,
-      liso0
+      liso0,
+      ondulado0, ondulado1, ondulado2
     ]
 
     gltfs.forEach(gltf => {
@@ -240,7 +286,7 @@ function Home() {
   }, [hair0, hair1, hair2, culturalHair0, culturalHair1, culturalHair2, culturalHair3, 
       cacheado0, cacheado1, crespo0, crespo1, liso0, body0, body1, body2, face0, face1, face2])
 
-  const [selectedHair, setSelectedHair] = useState(0) // 0 = none, 1-3 = straight, 4-7 = cultural, 8-9 cacheado, 10-11 crespo, 12 liso
+  const [selectedHair, setSelectedHair] = useState(16) // Start with Ondulado_2 pre-selected (id 16)
   const [selectedSection, setSelectedSection] = useState(null) // null = show all sections, otherwise id of MAIN_SECTIONS
   const [selectedSubSection, setSelectedSubSection] = useState(null) // when a section has subSections, this selects the sub-card
 
@@ -465,7 +511,7 @@ function Home() {
   }, [selectedSkinColor, selectedBodyType, selectedFaceOption, body0, body1, body2, face0, face1, face2, currentBodyTexture, currentFaceTexture])
 
   // Maximum hair id (update when adding new models)
-  const MAX_HAIR_ID = 12
+  const MAX_HAIR_ID = 16
 
   // Create springs for smooth transitions
   const springs = useSpring({
@@ -650,11 +696,15 @@ function Home() {
             {selectedHair === 5 && culturalHair1 && <primitive object={culturalHair1.scene} />}
             {selectedHair === 6 && culturalHair2 && <primitive object={culturalHair2.scene} />}
             {selectedHair === 7 && culturalHair3 && <primitive object={culturalHair3.scene} />}
+            {selectedHair === 13 && culturalHair4 && <primitive object={culturalHair4.scene} />}
             {selectedHair === 8 && cacheado0 && <primitive object={cacheado0.scene} />}
             {selectedHair === 9 && cacheado1 && <primitive object={cacheado1.scene} />}
             {selectedHair === 10 && crespo0 && <primitive object={crespo0.scene} />}
             {selectedHair === 11 && crespo1 && <primitive object={crespo1.scene} />}
             {selectedHair === 12 && liso0 && <primitive object={liso0.scene} />}
+            {selectedHair === 14 && ondulado0 && <primitive object={ondulado0.scene} />}
+            {selectedHair === 15 && ondulado1 && <primitive object={ondulado1.scene} />}
+            {selectedHair === 16 && ondulado2 && <primitive object={ondulado2.scene} /> }
           </animated.group>
 
           <OrbitControls
@@ -780,13 +830,6 @@ function Home() {
                     )
                   }
                 })()}
-
-                {/* reset button for hair stays */}
-                {selectedSection === 'hair' && selectedHair !== 0 && (
-                  <button className="reset-button" onClick={() => setSelectedHair(0)}>
-                    Remover Cabelo
-                  </button>
-                )}
               </div>
             )}
           </div>
