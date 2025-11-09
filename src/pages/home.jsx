@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Canvas } from '@react-three/fiber'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
+import { Canvas, useLoader } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useSpring, animated } from '@react-spring/three'
@@ -56,16 +56,6 @@ const MAIN_SECTIONS = [
     icon: GiHairStrands,
     subSections: [
       {
-        id: 'straight',
-        title: 'Cabelos Lisos',
-        icon: GiHairStrands,
-        options: [
-          { id: 1, label: '1' },
-          { id: 2, label: '2' },
-          { id: 3, label: '3' }
-        ]
-      },
-      {
         id: 'cultural',
         title: 'Cabelos Culturais',
         icon: GiLargeDress,
@@ -98,8 +88,12 @@ const MAIN_SECTIONS = [
         id: 'liso',
         title: 'Liso',
         icon: GiHairStrands,
+        // merged with previous "Cabelos Lisos" options (1..3)
         options: [
-          { id: 12, label: '1' }
+          { id: 1, label: '1' },
+          { id: 2, label: '2' },
+          { id: 3, label: '3' },
+          { id: 12, label: '4' }
         ]
       }
     ]
@@ -160,6 +154,12 @@ function Home() {
   const body0 = useGLTF('/models/female/GBody_0.glb')
   const body1 = useGLTF('/models/female/GBody_1.glb')
   const body2 = useGLTF('/models/female/GBody_2.glb')
+  
+  // Face variants that correspond to body types
+  const face0 = useGLTF('/models/female/GFace_0.glb')
+  const face1 = useGLTF('/models/female/GFace_1.glb')
+  const face2 = useGLTF('/models/female/GFace_2.glb')
+  
   // Straight hairs (1-3)
   const hair0 = useGLTF('/models/female/GHair_0.glb')
   const hair1 = useGLTF('/models/female/GHair_1.glb')
@@ -178,9 +178,14 @@ function Home() {
   // Liso (ids 12)
   const liso0 = useGLTF('/models/female/Hair(FEMALE)/Liso/Liso_0.glb')
 
-  // Ensure hair materials respect alpha/transparency. Run once when GLTFs load/change.
+  // Ensure all materials (body and hair) respect alpha/transparency. Run once when GLTFs load/change.
   useEffect(() => {
     const gltfs = [
+      // Include body models
+      body0, body1, body2,
+      // Include face models
+      face0, face1, face2,
+      // Hair models
       hair0, hair1, hair2,
       culturalHair0, culturalHair1, culturalHair2, culturalHair3,
       cacheado0, cacheado1,
@@ -196,28 +201,32 @@ function Home() {
         materials.forEach((mat) => {
           if (!mat) return
           try {
-            // ativa transparência apenas para texturas com canal alpha
+            // Ativa transparência apenas para texturas com canal alpha
             mat.transparent = true
 
-            // alphaTest descarta pixels totalmente transparentes (evita "fantasmas")
-            // ajuste entre ~0.3 e 0.7 conforme necessário; 0.5 é um bom ponto de partida
-            mat.alphaTest = 0.5
+            // AlphaTest mais agressivo para eliminar "fantasmas" completamente
+            // 0.7 é mais rigoroso que 0.5, descartando mais pixels semi-transparentes
+            mat.alphaTest = 0.7
 
-            // mantém depthWrite = true para que geometrias continuem sólidas no depth buffer
+            // Mantém depthWrite = true para que geometrias continuem sólidas no depth buffer
             mat.depthWrite = true
 
-            // renderiza frente apenas para evitar ver o 'verso' de shells finas
-            mat.side = THREE.FrontSide
+            // Renderiza frente e verso para garantir que não haja artefatos em nenhum ângulo
+            mat.side = THREE.DoubleSide
 
-            // se houver map, garanta espaço de cor correto e force atualização
+            // Se houver map, garanta espaço de cor correto e force atualização
             if (mat.map) {
               mat.map.encoding = THREE.sRGBEncoding
               mat.map.needsUpdate = true
             }
 
+            // Força blending aditivo para melhor qualidade nas transparências
+            mat.blending = THREE.NormalBlending
+            mat.premultipliedAlpha = true
+
             mat.needsUpdate = true
           } catch (e) {
-            // logamos o erro para facilitar debug caso algum material seja imutável
+            // Logamos o erro para facilitar debug caso algum material seja imutável
             // (por exemplo materiais do tipo GLTF/THREE.RawShaderMaterial)
             // mas não interrompemos a execução
             // eslint-disable-next-line no-console
@@ -228,7 +237,8 @@ function Home() {
     })
     // run when any of the referenced gltfs change
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hair0, hair1, hair2, culturalHair0, culturalHair1, culturalHair2, culturalHair3, cacheado0, cacheado1, crespo0, crespo1, liso0])
+  }, [hair0, hair1, hair2, culturalHair0, culturalHair1, culturalHair2, culturalHair3, 
+      cacheado0, cacheado1, crespo0, crespo1, liso0, body0, body1, body2, face0, face1, face2])
 
   const [selectedHair, setSelectedHair] = useState(0) // 0 = none, 1-3 = straight, 4-7 = cultural, 8-9 cacheado, 10-11 crespo, 12 liso
   const [selectedSection, setSelectedSection] = useState(null) // null = show all sections, otherwise id of MAIN_SECTIONS
@@ -237,8 +247,222 @@ function Home() {
   // lightweight selection state for body/face (placeholders for future behavior)
   // default to Tipo 1 which corresponds to GBody_0.glb
   const [selectedBodyType, setSelectedBodyType] = useState('body1')
-  const [selectedSkinColor, setSelectedSkinColor] = useState(null)
-  const [selectedFaceOption, setSelectedFaceOption] = useState(null)
+  const [selectedSkinColor, setSelectedSkinColor] = useState('skin1') // Default to 'Preto'
+  const [selectedFaceOption, setSelectedFaceOption] = useState('face1') // Default to A1 (Preto)
+  
+  // Função para gerar o caminho da textura do rosto baseado na seleção atual
+  const getFaceTexturePath = (faceOption, skinColor) => {
+    const basePath = '/models/female/TEXTURES'
+    const selectedSkinFolder = skinIdToFolderName[skinColor] // Pasta da cor da pele atual (PRETO, PARDO, etc)
+    const faceTextureName = faceTypeToTextureName[faceOption] // Tipo de rosto da opção selecionada (A1=PRETO, A2=PARDO, etc)
+    
+    // O nome do arquivo é baseado no tipo de rosto (A1-A5) que queremos mostrar
+    // e o sufixo (_0 a _4) é baseado na cor da pele atual
+    // Exemplo: se A1 (face1=PRETO) está selecionado e a pele é PARDO, carrega PRETO_3.png
+    return `${basePath}/${selectedSkinFolder}/ROSTO/${faceTextureName}${skinTypeToTextureId[selectedSkinFolder]}.png`
+  }
+
+  // Mapa de texturas para cores de pele
+  const skinTextureMap = {
+    skin1: '/models/female/TEXTURES/PRETO/CORPO_PRETO/PRETO.png',
+    skin2: '/models/female/TEXTURES/PARDO/CORPO_PARDO/PARDO.png',
+    skin3: '/models/female/TEXTURES/INDIGENA/CORPO_INDIGENA/INDIGENA.png',
+    skin4: '/models/female/TEXTURES/AMARELO/CORPO_AMARELO/AMARELO.png',
+    skin5: '/models/female/TEXTURES/BRANCO/CORPO_BRANCO/BRANCO.png'
+  }
+
+  // Mapeamento entre opção de rosto (A1-A5) e tom de pele
+  const faceTypeToTextureName = {
+    face1: 'PRETO',    // A1 - Preto
+    face2: 'PARDO',    // A2 - Pardo
+    face3: 'INDIGENA', // A3 - Indígena
+    face4: 'AMARELO',  // A4 - Amarelo
+    face5: 'BRANCO'    // A5 - Branco
+  }
+
+  // Mapeamento do ID da textura baseado no tom de pele selecionado
+  const skinTypeToTextureId = {
+    'PRETO': '_0',     // ID 0 quando a pele é Preta
+    'AMARELO': '_1',   // ID 1 quando a pele é Amarela
+    'BRANCO': '_2',    // ID 2 quando a pele é Branca
+    'PARDO': '_3',     // ID 3 quando a pele é Parda
+    'INDIGENA': '_4'   // ID 4 quando a pele é Indígena
+  }
+
+  // Mapeamento reverso de skin1-skin5 para nomes de pasta
+  const skinIdToFolderName = {
+    skin1: 'PRETO',
+    skin2: 'PARDO',
+    skin3: 'INDIGENA',
+    skin4: 'AMARELO',
+    skin5: 'BRANCO'
+  }
+
+  // Pre-carrega todas as texturas (corpo e rosto)
+  const { skinTextures, faceTexture } = useMemo(() => {
+    const textures = {}
+    const loader = new THREE.TextureLoader()
+    
+    // Função para configurar a textura
+    const setupTexture = (texture) => {
+      texture.flipY = false
+      texture.encoding = THREE.sRGBEncoding
+      texture.colorSpace = THREE.SRGBColorSpace
+      texture.minFilter = THREE.LinearFilter
+      texture.magFilter = THREE.LinearFilter
+      texture.generateMipmaps = true
+      return texture
+    }
+
+    // Carrega texturas do corpo
+    Object.entries(skinTextureMap).forEach(([key, path]) => {
+      textures[key] = setupTexture(loader.load(path))
+    })
+
+    // Carrega textura inicial do rosto
+    const initialFaceTexture = setupTexture(
+      loader.load(getFaceTexturePath(selectedFaceOption, selectedSkinColor))
+    )
+
+    return {
+      skinTextures: textures,
+      faceTexture: initialFaceTexture
+    }
+  }, []) // Carrega apenas uma vez
+
+  // Referência à textura atual do corpo
+  const currentBodyTexture = useMemo(() => 
+    skinTextures[selectedSkinColor], 
+    [selectedSkinColor, skinTextures]
+  )
+
+  // Atualiza a textura do rosto quando mudar a seleção do rosto ou cor da pele
+  const currentFaceTexture = useMemo(() => {
+    const loader = new THREE.TextureLoader()
+    const setupTexture = (texture) => {
+      texture.flipY = false
+      texture.encoding = THREE.sRGBEncoding
+      texture.colorSpace = THREE.SRGBColorSpace
+      texture.minFilter = THREE.LinearFilter
+      texture.magFilter = THREE.LinearFilter
+      texture.generateMipmaps = true
+      return texture
+    }
+    
+    return setupTexture(loader.load(getFaceTexturePath(selectedFaceOption, selectedSkinColor)))
+  }, [selectedFaceOption, selectedSkinColor])
+
+  // Effect para atualizar as texturas quando mudar a seleção
+  useEffect(() => {
+    // Seleciona o corpo e rosto corretos baseado no tipo selecionado
+    const currentBody = selectedBodyType === 'body2' ? body1 : (selectedBodyType === 'body3' ? body2 : body0)
+    const currentFace = selectedBodyType === 'body2' ? face1 : (selectedBodyType === 'body3' ? face2 : face0)
+    
+    if (!currentBody?.scene || !currentBodyTexture || !currentFace?.scene || !currentFaceTexture) return
+
+    // Guarda as referências originais dos materiais do corpo
+    if (!currentBody.scene.userData.originalMaterials) {
+      currentBody.scene.userData.originalMaterials = new Map()
+    }
+
+    // Guarda as referências originais dos materiais do rosto
+    if (!currentFace.scene.userData.originalMaterials) {
+      currentFace.scene.userData.originalMaterials = new Map()
+    }
+
+    // Atualiza materiais do corpo
+    currentBody.scene.traverse((node) => {
+      if (!node.isMesh) return
+      const materials = Array.isArray(node.material) ? node.material : [node.material]
+      
+      materials.forEach(mat => {
+        if (!mat || !mat.map) return
+        
+        // Guarda material original se ainda não guardamos
+        const originalKey = node.uuid + '-' + mat.uuid
+        if (!currentBody.scene.userData.originalMaterials.has(originalKey)) {
+          currentBody.scene.userData.originalMaterials.set(originalKey, mat.clone())
+        }
+        
+        // Pega referência do material original
+        const originalMat = currentBody.scene.userData.originalMaterials.get(originalKey)
+        
+        // Configurações de material otimizadas
+        mat.map = currentBodyTexture
+        mat.transparent = false
+        mat.opacity = 1.0
+        mat.alphaTest = 0
+        mat.depthWrite = true
+        mat.depthTest = true
+        mat.side = THREE.FrontSide
+        
+        // Mantém as propriedades originais do material
+        mat.roughness = originalMat.roughness || 0.8
+        mat.metalness = originalMat.metalness || 0.0
+        mat.envMapIntensity = originalMat.envMapIntensity || 0.8
+        mat.color.copy(originalMat.color)
+        
+        // Configurações de renderização
+        mat.blending = THREE.NoBlending
+        mat.premultipliedAlpha = false
+        
+        // Atualiza apenas a textura sem recriar o material
+        mat.map.needsUpdate = true
+        mat.needsUpdate = true
+      })
+    })
+
+    // Atualiza materiais do rosto
+    currentFace.scene.traverse((node) => {
+      if (!node.isMesh) return
+
+      // Converte para array mesmo se for material único
+      const materials = Array.isArray(node.material) ? node.material : [node.material]
+      
+      materials.forEach(mat => {
+        if (!mat) return
+        
+        // Cria um novo material se não existir
+        if (!mat.map) {
+          mat.map = currentFaceTexture
+        }
+        
+        // Guarda material original se ainda não guardamos
+        const originalKey = node.uuid + '-' + mat.uuid
+        if (!currentFace.scene.userData.originalMaterials.has(originalKey)) {
+          currentFace.scene.userData.originalMaterials.set(originalKey, mat.clone())
+        }
+        
+        // Pega referência do material original
+        const originalMat = currentFace.scene.userData.originalMaterials.get(originalKey)
+        
+        // Configurações específicas para texturas do rosto
+        mat.map = currentFaceTexture
+        mat.transparent = true // Rosto precisa de transparência
+        mat.opacity = 1.0
+        mat.alphaTest = 0.1 // Valor mais baixo para texturas do rosto
+        mat.depthWrite = true
+        mat.depthTest = true
+        mat.side = THREE.DoubleSide // Importante para o rosto
+        
+        // Mantém as propriedades originais do material
+        mat.roughness = originalMat.roughness || 0.5 // Menor roughness para o rosto
+        mat.metalness = originalMat.metalness || 0.0
+        mat.envMapIntensity = originalMat.envMapIntensity || 1.0 // Mais brilho para o rosto
+        mat.color.copy(originalMat.color)
+        
+        // Configurações de renderização específicas para o rosto
+        mat.blending = THREE.NormalBlending
+        mat.premultipliedAlpha = true
+        
+        // Atualiza a textura e o material
+        if (mat.map) {
+          mat.map.needsUpdate = true
+          mat.needsUpdate = true
+        }
+      })
+    })
+  }, [selectedSkinColor, selectedBodyType, selectedFaceOption, body0, body1, body2, face0, face1, face2, currentBodyTexture, currentFaceTexture])
 
   // Maximum hair id (update when adding new models)
   const MAX_HAIR_ID = 12
@@ -406,10 +630,18 @@ function Home() {
             rotation={springs.rotation}
             scale={springs.scale}
           >
-            {/* render currently selected body variant */}
+            {/* render currently selected body and corresponding face */}
             {((() => {
-              const current = selectedBodyType === 'body2' ? body1 : (selectedBodyType === 'body3' ? body2 : body0)
-              return current && current.scene ? <primitive object={current.scene} /> : null
+              // Select the correct body and face pair based on body type
+              const currentBody = selectedBodyType === 'body2' ? body1 : (selectedBodyType === 'body3' ? body2 : body0)
+              const currentFace = selectedBodyType === 'body2' ? face1 : (selectedBodyType === 'body3' ? face2 : face0)
+              
+              return (
+                <>
+                  {currentBody && currentBody.scene && <primitive object={currentBody.scene} />}
+                  {currentFace && currentFace.scene && <primitive object={currentFace.scene} />}
+                </>
+              )
             })())}
             {selectedHair === 1 && hair0 && <primitive object={hair0.scene} />}
             {selectedHair === 2 && hair1 && <primitive object={hair1.scene} />}
