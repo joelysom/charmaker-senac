@@ -181,6 +181,15 @@ function Home() {
   const culturalHair2 = useGLTF('/models/male/hair(MALE)/Cultural/Cultural_2.glb')
   const culturalHair3 = useGLTF('/models/male/hair(MALE)/Cultural/Cultural_3.glb')
   const culturalHair4 = useGLTF('/models/male/hair(MALE)/Cultural/Cultural_4.glb')
+  // Carregar textura do Cultural_4
+  const cultural4Texture = useMemo(() => {
+    const loader = new THREE.TextureLoader()
+    const texture = loader.load('/models/male/hair(MALE)/Cultural/Cultural_4.png')
+    texture.flipY = false
+    texture.encoding = THREE.sRGBEncoding
+    texture.colorSpace = THREE.SRGBColorSpace
+    return texture
+  }, [])
   // Cacheado (ids 8..9)
   const cacheado0 = useGLTF('/models/male/hair(MALE)/Cacheado/Cacheado_0.glb')
   const cacheado1 = useGLTF('/models/male/hair(MALE)/Cacheado/Cacheado_1.glb')
@@ -204,6 +213,26 @@ function Home() {
   const ondulado2 = useGLTF('/models/male/hair(MALE)/Ondulado/Ondulado_2.glb')
 
   // Ensure all materials (body and hair) respect alpha/transparency. Run once when GLTFs load/change.
+  // Effect para aplicar a textura ao modelo Cultural_4
+  useEffect(() => {
+    if (culturalHair4 && culturalHair4.scene && cultural4Texture) {
+      culturalHair4.scene.traverse((child) => {
+        if (child.isMesh) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material]
+          materials.forEach((mat) => {
+            if (!mat) return
+            mat.map = cultural4Texture
+            mat.transparent = true
+            mat.alphaTest = 0.7
+            mat.depthWrite = true
+            mat.side = THREE.DoubleSide
+            mat.needsUpdate = true
+          })
+        }
+      })
+    }
+  }, [culturalHair4, cultural4Texture])
+
   // Effect para aplicar a textura ao modelo Crespo_1
   useEffect(() => {
     if (crespo1 && crespo1.scene && crespo1Texture) {
