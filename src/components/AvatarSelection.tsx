@@ -55,7 +55,7 @@ export function AvatarSelection({ userName, onComplete }: AvatarSelectionProps) 
 
   return (
     <>
-      {/* Tela de Loading com imagem de fundo */}
+      {/* Tela de LOADING com imagem de fundo */}
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{
           backgroundImage: 'url(/charmaker/LOADING.png)',
@@ -119,12 +119,10 @@ export function AvatarSelection({ userName, onComplete }: AvatarSelectionProps) 
           />
         </div>
       </div>
-      {/* Confirmation Dialog */}
+      {/* dialogo de confirmação ¬.¬ */}
       <Dialog
         open={isDialogOpen}
         onOpenChange={(open: boolean) => {
-          // when the dialog is closed (open === false) and we are NOT confirming,
-          // revert the selection the same way as Cancel (smoothly)
           setIsDialogOpen(open);
           if (!open && !isConfirming && pendingSelection) {
             setTimeout(() => {

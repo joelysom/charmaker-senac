@@ -50,21 +50,21 @@ html,body,#root{
 }
 
 .btn-back, .btn-save {
-  padding: 10px 16px;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   font-family: inherit;
 }
 
 .btn-back {
+  padding: 10px 16px;
   background: #ffffff;
   color: #333;
   border: 1px solid #ddd;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-back:hover {
@@ -73,17 +73,38 @@ html,body,#root{
 }
 
 .btn-save {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  /* Warm "dourado" text on solid black background — intuitive and prominent */
+  background: #0b0b0b !important; /* near-black */
+  color: #f5c24a !important; /* warm golden-yellow */
+  padding: 16px 32px !important; /* increased vertical padding for text fit */
+  min-width: 140px; /* ensure minimum button width */
+  min-height: 48px; /* professional button height */
+  border-radius: 8px;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(245,194,74,0.08) !important;
+  box-shadow: 0 2px 6px rgba(11,11,11,0.45) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .btn-save:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  /* soft golden glow on hover */
+  box-shadow: 0 8px 30px rgba(245,194,74,0.14), 0 2px 8px rgba(11,11,11,0.5) !important;
+  color: #ffd66a !important; /* slightly brighter on hover */
+}
+
+.btn-save:focus {
+  outline: 3px solid rgba(245,194,74,0.16);
+  outline-offset: 2px;
 }
 
 .btn-save:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -288,32 +309,67 @@ html,body,#root{
   font-size:18px;
 }
 
-/* Preset position arrows */
-.preset-arrows{
-  position: absolute;
-  top: 80px; /* Below the hair arrows */
-  left: 50%;
-  transform: translateX(-50%);
-  display:flex;
-  gap:12px;
-  z-index:10;
-}
-.preset-arrows button{
+/* Image-based icon buttons inside overlays */
+.overlay-top .img-button{
   width:40px;
   height:40px;
   border-radius:8px;
   border:1px solid rgba(2,6,23,0.06);
   background:white;
   cursor:pointer;
-  font-size:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px;
+}
+.overlay-top .img-button img{
+  width:24px;
+  height:24px;
+  object-fit:contain;
+}
+.overlay-top .img-button:hover{ background: rgba(2,6,23,0.04); border-color: rgba(2,6,23,0.12); }
+
+/* Preset position arrows */
+.preset-arrows{
+  position: absolute;
+  margin-top: 200px;
+  /* Center the preset arrows both horizontally and vertically */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display:flex;
+  gap:16px;
+  z-index:20;
+}
+.preset-arrows button{
+  /* Keep large touch target, but remove visible chrome (transparent background, no border/shadow)
+     so the PNG icon feels floating — the glow will be applied to the image itself on hover */
+  width: 156px;
+  height: 156px;
+  border-radius:10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size:22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: transform 0.18s ease;
+}
+.preset-arrows button img{
+  width: 132px;
+  height: 132px;
+  object-fit: contain;
+  transition: filter 200ms ease, transform 200ms ease;
+  /* render the PNG as-is; glow will be added on hover */
 }
 .preset-arrows button:hover{
-  background: rgba(37,99,235,0.1);
-  border-color: rgba(37,99,235,0.2);
+  transform: translateY(-3px);
+}
+.preset-arrows button:hover img{
+  /* Brighten and add layered drop-shadows to emulate a glow around the icon */
+  filter: brightness(1.35) drop-shadow(0 0 12px rgba(59,130,246,0.95)) drop-shadow(0 0 28px rgba(99,102,241,0.55));
+  transform: scale(1.03);
 }
 
 /* Bottom centered card */
@@ -572,7 +628,13 @@ html,body,#root{
     transform: translateX(-50%);
   }
 
+  .btn-save {
+    width: 220px;
+    height: 220px;
+  }
+
   .preset-arrows {
+    margin-top: 500px;
     top: 70px; /* Slightly closer to top on mobile */
   }
 

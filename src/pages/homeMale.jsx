@@ -8,6 +8,8 @@ import { useSpring, animated } from '@react-spring/three'
 import { GiHairStrands, GiLargeDress } from 'react-icons/gi'
 import { IoMdClose } from 'react-icons/io'
 import '../styles/home.css'
+import { auth, db } from '../firebase/firebase'
+import { doc, getDoc } from 'firebase/firestore'
 
 // Main menu sections
 const MAIN_SECTIONS = [
@@ -326,6 +328,30 @@ function Home({ onDone }) {
   const [selectedBodyType, setSelectedBodyType] = useState('body1')
   const [selectedSkinColor, setSelectedSkinColor] = useState('skin3') // Default to 'Indigena'
   const [selectedFaceOption, setSelectedFaceOption] = useState('face3') // Default to A3 (Indigena)
+  
+  // Load saved character for current user (if any) to initialize the editor
+  useEffect(() => {
+    let mounted = true
+    const loadSavedCharacter = async () => {
+      try {
+        const user = auth.currentUser
+        if (!user) return
+        const snap = await getDoc(doc(db, 'characters', user.uid))
+        if (!snap.exists()) return
+        const data = snap.data()
+        if (!mounted) return
+        if (data.bodyType) setSelectedBodyType(data.bodyType)
+        if (data.skinCode) setSelectedSkinColor(data.skinCode)
+        if (data.faceOption) setSelectedFaceOption(data.faceOption)
+        if (typeof data.hairId === 'number') setSelectedHair(data.hairId)
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Não foi possível carregar personagem salvo:', e)
+      }
+    }
+    loadSavedCharacter()
+    return () => { mounted = false }
+  }, [])
   
   // Função para gerar o caminho da textura do rosto baseado na seleção atual
   const getFaceTexturePath = (faceOption, skinColor) => {
@@ -678,10 +704,6 @@ function Home({ onDone }) {
       <div className="viewer-container">
         {/* overlays */}
         <div className="overlay-top">
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setSelectedHair((s) => Math.max(0, s - 1))}>&lt;</button>
-            <button onClick={() => setSelectedHair((s) => Math.min(MAX_HAIR_ID, s + 1))}>&gt;</button>
-          </div>
           <div style={{ marginLeft: 'auto' }}>
             <SaveButton
               gender="male"
@@ -695,15 +717,22 @@ function Home({ onDone }) {
         </div>
         {/* Preset position arrows */}
         <div className="preset-arrows">
-          <button 
+          {/* Rotation / preset controls use image buttons as requested */}
+          <button
+            className="img-button"
+            aria-label="Rotação anterior"
             onClick={() => setCurrentPreset((p) => (p - 1 + modelPresets.length) % modelPresets.length)}
+            title="Rotação anterior"
           >
-            ⟲
+            <img src="/charmaker/left.png" alt="rot-left" />
           </button>
-          <button 
+          <button
+            className="img-button"
+            aria-label="Próxima rotação"
             onClick={() => setCurrentPreset((p) => (p + 1) % modelPresets.length)}
+            title="Próxima rotação"
           >
-            ⟳
+            <img src="/charmaker/right.png" alt="rot-right" />
           </button>
         </div>
 

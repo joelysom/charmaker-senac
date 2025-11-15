@@ -80,7 +80,7 @@ export default function SaveButton({ gender, selectedBodyType, selectedSkinColor
     <button
       onClick={saveCharacter}
       disabled={saving}
-      style={{ padding: '8px 12px', background: '#111827', color: '#FBBF24', borderRadius: 6, border: 'none' }}
+      className="btn-save"
     >
       {saving ? 'Salvando...' : 'Salvar e continuar'}
     </button>
