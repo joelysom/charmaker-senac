@@ -51,6 +51,9 @@ export default function AdminPage() {
   const [quizModalUser, setQuizModalUser] = useState(null)
   const [quizDetails, setQuizDetails] = useState(null)
 
+  const [infractionsModalUser, setInfractionsModalUser] = useState(null)
+  const [infractionsDetails, setInfractionsDetails] = useState([])
+
   // stats
   const [stats, setStats] = useState(null)
 
@@ -198,16 +201,29 @@ export default function AdminPage() {
         // get infractions count
         const violSnap = await getDocs(query(collection(db, 'violations'), where('userId', '==', uid)))
         const infractions = violSnap.size || violSnap.docs.length || 0
-        // quiz info: prefer the latest document in users/{uid}/quizResults subcollection
+        // quiz info: Get ALL quiz results (Phase 1 + Phase 2) and combine them
         let quizInfo = null
         try {
-          const quizSnap = await getDocs(query(collection(db, 'users', uid, 'quizResults'), orderBy('timestamp', 'desc'), limit(1)))
+          // Get ALL documents from quizResults, not just the latest one
+          const quizSnap = await getDocs(query(collection(db, 'users', uid, 'quizResults'), orderBy('timestamp', 'desc')))
+          
           if (quizSnap.docs && quizSnap.docs.length > 0) {
-            const qdoc = quizSnap.docs[0].data()
-            // normalize shape to { totalCorrect, totalQuestions, answers }
-            // normalize answer entries so each item has `isCorrect` (boolean) and `correct` for compatibility
-            const normalizedAnswers = Array.isArray(qdoc.answers)
-              ? qdoc.answers.map(a => {
+            // Combine ALL phases into one result
+            let totalCorrect = 0
+            let totalQuestions = 0
+            let allAnswers = []
+            let latestTimestamp = null
+            
+            quizSnap.docs.forEach(docSnap => {
+              const qdoc = docSnap.data()
+              
+              // Add up the scores from each phase
+              totalCorrect += (qdoc.correctAnswers ?? qdoc.totalCorrect ?? qdoc.correct ?? 0)
+              totalQuestions += (qdoc.totalQuestions ?? qdoc.total ?? 0)
+              
+              // Combine answers from all phases
+              if (Array.isArray(qdoc.answers)) {
+                const normalizedAnswers = qdoc.answers.map(a => {
                   const isCorrect = (a.isCorrect != null)
                     ? Boolean(a.isCorrect)
                     : (a.selected != null && a.correct != null ? a.selected === a.correct : null)
@@ -216,17 +232,24 @@ export default function AdminPage() {
                     selected: a.selected ?? null,
                     correctIndex: a.correct ?? null,
                     isCorrect,
-                    // legacy compatibility: some UI expects `correct` boolean
                     correct: isCorrect,
                   }
                 })
-              : null
+                allAnswers = [...allAnswers, ...normalizedAnswers]
+              }
+              
+              // Keep the latest timestamp
+              const docTimestamp = qdoc.timestamp ?? qdoc.completedAt ?? null
+              if (!latestTimestamp || (docTimestamp && docTimestamp > latestTimestamp)) {
+                latestTimestamp = docTimestamp
+              }
+            })
 
             quizInfo = {
-              totalCorrect: qdoc.correctAnswers ?? qdoc.totalCorrect ?? qdoc.correct ?? null,
-              totalQuestions: qdoc.totalQuestions ?? qdoc.total ?? null,
-              answers: normalizedAnswers,
-              timestamp: qdoc.timestamp ?? qdoc.completedAt ?? null,
+              totalCorrect: totalCorrect,
+              totalQuestions: totalQuestions,
+              answers: allAnswers.length > 0 ? allAnswers : null,
+              timestamp: latestTimestamp,
             }
           } else if (data.quizStats) {
             // fallback to aggregated stats stored on the user document
@@ -313,6 +336,131 @@ export default function AdminPage() {
     }
     // expected shape: { totalCorrect, totalQuestions, answers: [{questionId, correct}] }
     setQuizDetails(q)
+  }
+
+  const deleteUser = async () => {
+    if (!selectedUser) return
+    const confirmDelete = window.confirm(
+      `⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n` +
+      `Você está prestes a DELETAR PERMANENTEMENTE:\n` +
+      `• Usuário: ${selectedUser.name}\n` +
+      `• Email: ${selectedUser.email}\n` +
+      `• Personagem associado\n` +
+      `• Todos os resultados de quiz\n` +
+      `• Todas as infrações\n\n` +
+      `Tem certeza que deseja continuar?`
+    )
+    
+    if (!confirmDelete) return
+
+    try {
+      const uid = selectedUser.uid
+      
+      // Delete character
+      try {
+        await setDoc(doc(db, 'characters', uid), { deleted: true, deletedAt: new Date().toISOString() })
+      } catch (e) {
+        console.warn('Erro ao deletar personagem:', e)
+      }
+
+      // Delete quiz results
+      try {
+        const quizResultsSnap = await getDocs(collection(db, 'users', uid, 'quizResults'))
+        for (const qDoc of quizResultsSnap.docs) {
+          await setDoc(doc(db, 'users', uid, 'quizResults', qDoc.id), { deleted: true })
+        }
+      } catch (e) {
+        console.warn('Erro ao deletar resultados de quiz:', e)
+      }
+
+      // Delete quiz progress
+      try {
+        await setDoc(doc(db, 'users', uid, 'quizProgress', 'phase2'), { deleted: true })
+      } catch (e) {
+        console.warn('Erro ao deletar progresso:', e)
+      }
+
+      // Delete violations
+      try {
+        const violSnap = await getDocs(query(collection(db, 'violations'), where('userId', '==', uid)))
+        for (const vDoc of violSnap.docs) {
+          await setDoc(doc(db, 'violations', vDoc.id), { deleted: true })
+        }
+      } catch (e) {
+        console.warn('Erro ao deletar infrações:', e)
+      }
+
+      // Delete user document
+      await setDoc(doc(db, 'users', uid), { deleted: true, deletedAt: new Date().toISOString() })
+
+      setShowAdminModal(false)
+      alert('✅ Usuário deletado com sucesso!')
+      fetchUsers()
+    } catch (e) {
+      console.error('Erro ao deletar usuário:', e)
+      alert('❌ Erro ao deletar usuário: ' + (e.message || e))
+    }
+  }
+
+  const resetQuiz = async () => {
+    if (!selectedUser) return
+    const confirmReset = window.confirm(
+      `Resetar quiz do usuário ${selectedUser.name}?\n\n` +
+      `Isso vai:\n` +
+      `• Deletar todos os resultados salvos\n` +
+      `• Resetar estatísticas (quizStats)\n` +
+      `• Deletar progresso não finalizado\n\n` +
+      `O usuário terá que fazer o quiz novamente desde o início.`
+    )
+    
+    if (!confirmReset) return
+
+    try {
+      const uid = selectedUser.uid
+
+      // Delete all quiz results
+      const quizResultsSnap = await getDocs(collection(db, 'users', uid, 'quizResults'))
+      for (const qDoc of quizResultsSnap.docs) {
+        await setDoc(doc(db, 'users', uid, 'quizResults', qDoc.id), { deleted: true })
+      }
+
+      // Delete quiz progress
+      await setDoc(doc(db, 'users', uid, 'quizProgress', 'phase2'), { deleted: true })
+
+      // Reset quizStats
+      await setDoc(doc(db, 'users', uid), {
+        quizStats: {
+          total: 0,
+          correct: 0,
+          wrong: 0,
+          phaseOneCompleted: false,
+          phaseTwoCompleted: false,
+          lastQuizDate: null
+        }
+      }, { merge: true })
+
+      alert('✅ Quiz resetado com sucesso!')
+      fetchUsers()
+    } catch (e) {
+      console.error('Erro ao resetar quiz:', e)
+      alert('❌ Erro ao resetar quiz: ' + (e.message || e))
+    }
+  }
+
+  const openInfractionsModal = async (user) => {
+    setInfractionsModalUser(user)
+    
+    try {
+      const violSnap = await getDocs(query(collection(db, 'violations'), where('userId', '==', user.uid)))
+      const violations = violSnap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }))
+      setInfractionsDetails(violations)
+    } catch (e) {
+      console.error('Erro ao buscar infrações:', e)
+      setInfractionsDetails([])
+    }
   }
 
   function computeStats(usersList) {
@@ -603,9 +751,12 @@ export default function AdminPage() {
                             </td>
                             <td className={`p-3 ${styles.td}`}>
                               {u.infractions > 0 ? (
-                                <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-sm font-medium">
+                                <button 
+                                  className="px-2 py-1 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200 transition"
+                                  onClick={() => openInfractionsModal(u)}
+                                >
                                   {u.infractions}
-                                </span>
+                                </button>
                               ) : (
                                 <span className="text-gray-400">0</span>
                               )}
@@ -758,9 +909,98 @@ export default function AdminPage() {
                 <option value={1}>1 - Admin</option>
               </select>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowAdminModal(false)}>Cancelar</Button>
-              <Button onClick={saveAdminLevel} className="bg-amber-500 hover:bg-amber-600"><FiShield className="inline mr-2" />Salvar</Button>
+            <div className="flex justify-between gap-2">
+              <Button 
+                variant="destructive" 
+                onClick={deleteUser}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                🗑️ Deletar Conta
+              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={resetQuiz}
+                  className="border-orange-500 text-orange-700 hover:bg-orange-50"
+                >
+                  🔄 Resetar Quiz
+                </Button>
+                <Button variant="ghost" onClick={() => setShowAdminModal(false)}>Cancelar</Button>
+                <Button onClick={saveAdminLevel} className="bg-amber-500 hover:bg-amber-600"><FiShield className="inline mr-2" />Salvar</Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Infractions modal */}
+      {infractionsModalUser && (
+        <div className={`fixed inset-0 z-50 flex items-center justify-center ${styles.modalOverlay}`}>
+          <div className={`absolute inset-0 bg-black/60 ${styles.modalBackdrop}`} onClick={() => { setInfractionsModalUser(null); setInfractionsDetails([]) }} />
+          <Card className={`z-50 p-6 w-full max-w-3xl max-h-[80vh] overflow-auto mx-4 ${styles.modalCardLarge}`}>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl">⚠️</span>
+              <h3 className="text-lg font-bold">Infrações</h3>
+              <span className="text-gray-600">— {infractionsModalUser.name}</span>
+            </div>
+            {infractionsDetails.length > 0 ? (
+              <div className="space-y-3">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    <strong>{infractionsDetails.length}</strong> infração(ões) registrada(s)
+                  </p>
+                </div>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {infractionsDetails.map((infraction, idx) => (
+                    <div 
+                      key={infraction.id || idx}
+                      className="p-4 bg-white border-l-4 border-red-500 rounded-lg shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xl">🚫</span>
+                            <span className="font-bold text-red-700">Infração #{idx + 1}</span>
+                          </div>
+                          {infraction.message && (
+                            <p className="text-gray-700 mb-2">
+                              <strong>Mensagem:</strong> {infraction.message}
+                            </p>
+                          )}
+                          {infraction.reason && (
+                            <p className="text-gray-700 mb-2">
+                              <strong>Motivo:</strong> {infraction.reason}
+                            </p>
+                          )}
+                          {infraction.type && (
+                            <p className="text-gray-600 text-sm mb-1">
+                              <strong>Tipo:</strong> {infraction.type}
+                            </p>
+                          )}
+                          {infraction.timestamp && (
+                            <p className="text-gray-500 text-xs">
+                              <strong>Data:</strong> {new Date(infraction.timestamp).toLocaleString('pt-BR')}
+                            </p>
+                          )}
+                          {infraction.createdAt && !infraction.timestamp && (
+                            <p className="text-gray-500 text-xs">
+                              <strong>Data:</strong> {new Date(infraction.createdAt).toLocaleString('pt-BR')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <span className="text-4xl mb-3 block">✨</span>
+                Nenhuma infração registrada para este usuário.
+              </div>
+            )}
+            <div className="flex justify-end mt-6">
+              <Button variant="ghost" onClick={() => { setInfractionsModalUser(null); setInfractionsDetails([]) }}>Fechar</Button>
             </div>
           </Card>
         </div>

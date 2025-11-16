@@ -61,6 +61,8 @@ type Comment = {
   };
   likes: number;
   likedBy: string[];
+  replyTo?: string; // Name of user being replied to
+  replyToId?: string; // ID of user being replied to
 };
 
 type Post = {
@@ -98,6 +100,7 @@ export function Community({ userData, onBack }: CommunityProps) {
   const [blockedViolation, setBlockedViolation] = useState<null | { matched: string; fullText: string; type: 'post' | 'comment'; postId?: string }>(null);
 
   const [loadingComments, setLoadingComments] = useState<string[]>([]);
+  const [replyingTo, setReplyingTo] = useState<{ postId: string; commentId: string; author: string; authorId: string } | null>(null);
 
   const frasesList: string[] = (frasesTxt || '').split(/\r?\n/).map((s: string) => s.trim()).filter(Boolean) as string[];
   const palavrasList: string[] = (palavrasTxt || '').split(/\r?\n/).map((s: string) => s.trim()).filter(Boolean) as string[];
@@ -200,23 +203,31 @@ export function Community({ userData, onBack }: CommunityProps) {
         );
         const querySnapshot = await getDocs(postsQuery);
         
-        const loadedPosts: Post[] = querySnapshot.docs.map(docSnapshot => {
-          const postData = docSnapshot.data();
-          return {
-            id: docSnapshot.id,
-            author: postData.author,
-            authorId: postData.authorId,
-            avatar: postData.avatar,
-            content: postData.content,
-            category: postData.category || 'Compartilhamento',
-            likes: postData.likes || 0,
-            likedBy: postData.likedBy || [],
-            comments: [], 
-            createdAt: postData.createdAt,
-            time: formatRelativeTime(postData.createdAt),
-            character: postData.character
-          };
-        });
+        const loadedPosts: Post[] = await Promise.all(
+          querySnapshot.docs.map(async (docSnapshot) => {
+            const postData = docSnapshot.data();
+            
+            // Load comments count for each post
+            const commentsQuery = query(collection(db, 'posts', docSnapshot.id, 'comments'));
+            const commentsSnapshot = await getDocs(commentsQuery);
+            const commentsCount = commentsSnapshot.size;
+            
+            return {
+              id: docSnapshot.id,
+              author: postData.author,
+              authorId: postData.authorId,
+              avatar: postData.avatar,
+              content: postData.content,
+              category: postData.category || 'Compartilhamento',
+              likes: postData.likes || 0,
+              likedBy: postData.likedBy || [],
+              comments: new Array(commentsCount).fill(null).map(() => ({} as Comment)), // Placeholder comments to show count
+              createdAt: postData.createdAt,
+              time: formatRelativeTime(postData.createdAt),
+              character: postData.character
+            };
+          })
+        );
 
         setPosts(loadedPosts);
       } catch (e) {
@@ -253,7 +264,7 @@ export function Community({ userData, onBack }: CommunityProps) {
         {
           id: postId,
           ...postData,
-          comments: [],
+          comments: [], // New posts start with 0 comments
           time: 'agora'
         },
         ...posts
@@ -335,7 +346,8 @@ export function Community({ userData, onBack }: CommunityProps) {
     try {
       const post = posts.find(p => p.id === postId);
       
-      if (post && post.comments.length === 0) {
+      // Always load comments when expanding, even if we have placeholders
+      if (post) {
         const commentsQuery = query(
           collection(db, 'posts', postId, 'comments'),
           orderBy('createdAt', 'desc')
@@ -368,7 +380,7 @@ export function Community({ userData, onBack }: CommunityProps) {
       const user = auth.currentUser;
       if (!user) return;
       const commentId = `comment_${Date.now()}`;
-      const commentData = {
+      const commentData: any = {
         author: userData.name,
         authorId: user.uid,
         content: commentText,
@@ -377,10 +389,45 @@ export function Community({ userData, onBack }: CommunityProps) {
         createdAt: Timestamp.now(),
         character: character
       };
+
+      // Add reply info if replying to someone
+      let notificationRecipientId = null;
+      if (replyingTo && replyingTo.postId === postId) {
+        commentData.replyTo = replyingTo.author;
+        commentData.replyToId = replyingTo.authorId;
+        notificationRecipientId = replyingTo.authorId;
+      } else {
+        // If not replying, notify post author
+        const post = posts.find(p => p.id === postId);
+        if (post && post.authorId !== user.uid) {
+          notificationRecipientId = post.authorId;
+        }
+      }
+
       await setDoc(
         doc(db, 'posts', postId, 'comments', commentId),
         commentData
       );
+
+      // Create notification for the recipient
+      if (notificationRecipientId && notificationRecipientId !== user.uid) {
+        const notificationData = {
+          type: replyingTo ? 'reply' : 'comment',
+          recipientId: notificationRecipientId,
+          senderId: user.uid,
+          senderName: userData.name,
+          senderAvatar: userData.avatar,
+          senderCharacter: character,
+          postId: postId,
+          commentId: commentId,
+          content: commentText.substring(0, 100),
+          read: false,
+          createdAt: Timestamp.now()
+        };
+        await addDoc(collection(db, 'notifications'), notificationData);
+      }
+      
+      // Update the post with the new comment
       setPosts(posts.map(p => 
         p.id === postId
           ? {
@@ -391,12 +438,13 @@ export function Community({ userData, onBack }: CommunityProps) {
                   ...commentData,
                   createdAt: commentData.createdAt
                 },
-                ...p.comments
+                ...p.comments.filter(c => c.id) // Keep only real comments (filter out placeholders)
               ]
             }
           : p
       ));
       setNewComments(prev => ({ ...prev, [postId]: '' }));
+      setReplyingTo(null); // Clear reply state
     } catch (e) {
       console.error('Erro ao comentar:', e);
     }
@@ -659,10 +707,21 @@ export function Community({ userData, onBack }: CommunityProps) {
                             </div>
                           )}
                           <div className="flex-grow">
+                            {replyingTo && replyingTo.postId === post.id && (
+                              <div className="flex items-center gap-2 mb-2 text-xs text-gray-600">
+                                <span>Respondendo a <span className="font-semibold text-purple-600">@{replyingTo.author}</span></span>
+                                <button
+                                  onClick={() => setReplyingTo(null)}
+                                  className="text-gray-400 hover:text-gray-600"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            )}
                             <div className="flex gap-2">
                               <input
                                 type="text"
-                                placeholder="Escreva um comentário..."
+                                placeholder={replyingTo && replyingTo.postId === post.id ? `Respondendo @${replyingTo.author}...` : "Escreva um comentário..."}
                                 value={newComments[post.id] || ''}
                                 onChange={(e) =>
                                   setNewComments(prev => ({
@@ -689,7 +748,7 @@ export function Community({ userData, onBack }: CommunityProps) {
                           <div className="text-center py-4 text-gray-500 text-sm">
                             Carregando comentários...
                           </div>
-                        ) : post.comments.length > 0 ? (
+                        ) : post.comments.length > 0 && post.comments[0].id ? (
                           
                           <div className="space-y-4 mt-4">
                             {post.comments.map((comment) => (
@@ -714,18 +773,43 @@ export function Community({ userData, onBack }: CommunityProps) {
                                     <p className="text-gray-800 text-sm font-semibold">{comment.author}</p>
                                     <p className="text-gray-500 text-xs">{formatRelativeTime(comment.createdAt)}</p>
                                   </div>
-                                  <p className="text-gray-700 text-sm mb-2">{comment.content}</p>
-                                  <button
-                                    onClick={() => handleLikeComment(post.id, comment.id)}
-                                    className={`flex items-center gap-1 text-xs transition-colors ${
-                                      comment.likedBy.includes(auth.currentUser?.uid || '')
-                                        ? 'text-rose-600'
-                                        : 'text-gray-600 hover:text-rose-600'
-                                    }`}
-                                  >
-                                    <Heart className={`w-3 h-3 ${comment.likedBy.includes(auth.currentUser?.uid || '') ? 'fill-current' : ''}`} />
-                                    <span>{comment.likes > 0 ? comment.likes : ''}</span>
-                                  </button>
+                                  <p className="text-gray-700 text-sm mb-2">
+                                    {comment.replyTo && (
+                                      <span className="text-purple-600 font-semibold mr-1">
+                                        @{comment.replyTo}
+                                      </span>
+                                    )}
+                                    {comment.content}
+                                  </p>
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      onClick={() => handleLikeComment(post.id, comment.id)}
+                                      className={`flex items-center gap-1 text-xs transition-colors ${
+                                        comment.likedBy.includes(auth.currentUser?.uid || '')
+                                          ? 'text-rose-600'
+                                          : 'text-gray-600 hover:text-rose-600'
+                                      }`}
+                                    >
+                                      <Heart className={`w-3 h-3 ${comment.likedBy.includes(auth.currentUser?.uid || '') ? 'fill-current' : ''}`} />
+                                      <span>{comment.likes > 0 ? comment.likes : ''}</span>
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setReplyingTo({
+                                          postId: post.id,
+                                          commentId: comment.id,
+                                          author: comment.author,
+                                          authorId: comment.authorId
+                                        });
+                                        // Focus on input
+                                        const input = document.querySelector(`input[placeholder*="comentário"]`) as HTMLInputElement;
+                                        input?.focus();
+                                      }}
+                                      className="text-xs text-gray-600 hover:text-purple-600 transition-colors font-semibold"
+                                    >
+                                      Responder
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             ))}

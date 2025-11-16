@@ -3,7 +3,10 @@ import { AuthForm } from './components/AuthForm';
 import { ProfileForm } from './components/ProfileForm';
 import { AvatarSelection } from './components/AvatarSelection';
 import { QuizGame } from './components/QuizGame';
+import { QuizGamePhaseOne } from './components/QuizGamePhaseOne';
+import { QuizGamePhaseTwo } from './components/QuizGamePhaseTwo';
 import { ResultScreen } from './components/ResultScreen';
+import { ResultScreenPhaseTwo } from './components/ResultScreenPhaseTwo';
 import { MainMenu } from './components/MainMenu';
 import { Community } from './components/Community';
 import { Library } from './components/Library';
@@ -25,12 +28,15 @@ export type UserData = {
   email?: string;
 };
 
-export type GameStep = 'auth' | 'profile' | 'avatar' | 'quiz' | 'result' | 'menu' | 'community' | 'library' | 'locals' | 'stories' | 'support';
+export type GameStep = 'auth' | 'profile' | 'avatar' | 'quizPhaseOne' | 'quizPhaseTwo' | 'quiz' | 'result' | 'resultPhaseTwo' | 'menu' | 'community' | 'library' | 'locals' | 'stories' | 'support';
 
 export default function App() {
   const [currentStep, setCurrentStep] = useState<GameStep>('auth');
   const [userData, setUserData] = useState<UserData>({ name: '', age: 0, avatar: '', email: '' });
   const [score, setScore] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState(15);
+  const [phaseTwoScore, setPhaseTwoScore] = useState(0);
+  const [totalAccumulatedScore, setTotalAccumulatedScore] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
 
@@ -68,11 +74,14 @@ export default function App() {
             }));
 
             const hasCompletedQuiz = userDataFromDB?.quizStats?.lastQuizDate;
+            const hasCompletedPhaseOne = userDataFromDB?.quizStats?.phaseOneCompleted;
 
             if (hasCompletedQuiz) {
               setCurrentStep('menu');
+            } else if (hasCompletedPhaseOne) {
+              setCurrentStep('menu');
             } else {
-              setCurrentStep('quiz');
+              setCurrentStep('quizPhaseOne');
             }
           } else {
             setCurrentStep('avatar');
@@ -106,11 +115,26 @@ export default function App() {
 
   const handleAvatarComplete = (avatar: string) => {
     setUserData({ ...userData, avatar });
-    setCurrentStep('quiz');
+    setCurrentStep('quizPhaseOne');
   };
 
-  const handleQuizComplete = (finalScore: number) => {
+  const handlePhaseOneComplete = () => {
+    setCurrentStep('menu');
+  };
+
+  const handlePhaseTwoComplete = (totalScore: number, phaseTwoScore: number, phaseTwoQuestions: number) => {
+    // totalScore is the accumulated score (Phase 1 + Phase 2)
+    // phaseTwoScore is only the Phase 2 score (0-12)
+    // phaseTwoQuestions is the number of Phase 2 questions (12)
+    setTotalAccumulatedScore(totalScore);
+    setPhaseTwoScore(phaseTwoScore);
+    setTotalQuestions(phaseTwoQuestions); // This will be 12
+    setCurrentStep('resultPhaseTwo');
+  };
+
+  const handleQuizComplete = (finalScore: number, total: number = 15) => {
     setScore(finalScore);
+    setTotalQuestions(total);
     setCurrentStep('result');
   };
 
@@ -165,6 +189,20 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
         {currentStep === 'avatar' && (
           <AvatarSelection userName={userData.name} onComplete={handleAvatarComplete} />
         )}
+        {currentStep === 'quizPhaseOne' && userId && (
+          <QuizGamePhaseOne 
+            userId={userId}
+            userData={userData} 
+            onComplete={handlePhaseOneComplete} 
+          />
+        )}
+        {currentStep === 'quizPhaseTwo' && userId && (
+          <QuizGamePhaseTwo 
+            userId={userId}
+            userData={userData} 
+            onComplete={handlePhaseTwoComplete} 
+          />
+        )}
         {currentStep === 'quiz' && userId && ( // Adicionada verificação '&& userId', aumentar segurança.
           <QuizGame 
             userId={userId}
@@ -176,8 +214,17 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
           <ResultScreen 
             userData={userData} 
             score={score} 
-            totalQuestions={15}
+            totalQuestions={totalQuestions}
             onRestart={handleRestart}
+            onContinue={handleResultContinue}
+          />
+        )}
+        {currentStep === 'resultPhaseTwo' && (
+          <ResultScreenPhaseTwo 
+            userData={userData} 
+            phaseTwoScore={phaseTwoScore} 
+            totalPhaseTwoQuestions={totalQuestions}
+            totalAccumulatedScore={totalAccumulatedScore}
             onContinue={handleResultContinue}
           />
         )}
@@ -209,19 +256,19 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
         <Route path="/" element={appMain} />
         <Route
           path="/home-female"
-          element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quiz'); navigateTo('quiz'); } })}
+          element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quizPhaseOne'); navigateTo('quizPhaseOne'); } })}
         />
         <Route
           path="/Female"
-          element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quiz'); navigateTo('quiz'); } })}
+          element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quizPhaseOne'); navigateTo('quizPhaseOne'); } })}
         />
         <Route
           path="/home-male"
-          element={React.createElement(HomeMale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quiz'); navigateTo('quiz'); } })}
+          element={React.createElement(HomeMale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quizPhaseOne'); navigateTo('quizPhaseOne'); } })}
         />
         <Route
           path="/Male"
-          element={React.createElement(HomeMale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quiz'); navigateTo('quiz'); } })}
+          element={React.createElement(HomeMale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quizPhaseOne'); navigateTo('quizPhaseOne'); } })}
         />
         <Route path="/admin" element={<AdminPage />} />
       </Routes>

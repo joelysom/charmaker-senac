@@ -10,10 +10,10 @@ import { auth, db } from '../firebase/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import Avatar3D from './Avatar3D';
 
-type QuizGameProps = {
+type QuizGamePhaseTwoProps = {
   userId: string; 
   userData: UserData;
-  onComplete: (score: number, totalQuestions: number) => void;
+  onComplete: (totalAccumulatedScore: number, phaseTwoScore: number, totalPhaseTwoQuestions: number) => void;
 };
 
 type Question = {
@@ -32,51 +32,7 @@ type DictionaryEntry = {
   alternative: string;
 };
 
-const questions: Question[] = [
-    {
-    id: 1,
-    situation: 'Você escolhe não contratar uma pessoa negra porque acha que ela “não combina com o perfil da empresa”.',
-    question: 'Essa atitude pode ser considerada:',
-    perspective: 'aggressor',
-    options: [
-      'Racismo estrutural.',
-      'Uma escolha pessoal.',
-      'Preconceito inconsciente.',
-      'Nenhuma das anteriores.'
-    ],
-    correctAnswer: 0,
-    //Verificar correção dessas 3 primeiras questões, solicitar explicação
-    explanation: 'Racismo estrutural'
-  },
-  {
-    id: 2,
-    situation: 'Você entra em uma loja de grife no shopping e percebe que além de não ter ninguém querendo lhe atender passa a ser seguido apenas por causa do tom de sua pele.',
-    question: 'O que você pode fazer?',
-    perspective: 'victim',
-    options: [
-      'Denunciar o ocorrido.',
-      'Ignorar e ir embora.',
-      'Questionar o motivo.',
-      'Ficar em silêncio para evitar problemas.'
-    ],
-    correctAnswer: 0,
-    //Verificar correção dessas 3 primeiras questões, solicitar explicação
-    explanation: 'Denunciar o ocorrido.'
-  },
-  {
-    id: 3,
-    situation: 'Você presencia um colega sendo  discriminado ao realizar certo tipo de atividade em por sua cor de pele.',
-    question: 'O que você faz?',
-    perspective: 'witness',
-    options: [
-      'Apoia o colega e denuncia o agressor.',
-      'Finge que não viu.',
-      'Ri junto com os outros.',
-      'Espera que alguém tome uma atitude.'
-    ],
-    correctAnswer: 0,
-    explanation: 'Apoia o colega e denuncia o agressor'
-  },
+const phaseTwoQuestions: Question[] = [
   {
     id: 4,
     situation: 'Você presencia um colega fazendo uma "piada" racista no ambiente de trabalho e todos riem.',
@@ -297,10 +253,8 @@ function processAndShuffleQuestions(questionsToShuffle: Question[]): Question[] 
   });
 }
 
-// Componente
-export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
-  
-  const [shuffledQuestions] = useState(() => processAndShuffleQuestions(questions));
+export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhaseTwoProps) {
+  const [shuffledQuestions] = useState(() => processAndShuffleQuestions(phaseTwoQuestions));
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -311,6 +265,75 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
   const [loadingCharacter, setLoadingCharacter] = useState(true);
   const [answers, setAnswers] = useState<Array<{ questionId: number; selected: number; correct: number; isCorrect: boolean }>>([]);
   const [lastAnswerWasIncorrect, setLastAnswerWasIncorrect] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(true);
+  const [phaseOneScore, setPhaseOneScore] = useState(0);
+
+  // Load saved progress and Phase 1 score
+  useEffect(() => {
+    const loadProgress = async () => {
+      try {
+        if (!userId) {
+          setLoadingProgress(false);
+          return;
+        }
+
+        // Load Phase 1 results DIRECTLY from quizResults to get the ACTUAL Phase 1 score
+        // Don't use quizStats.correct because it might include Phase 2 if user is redoing
+        const userRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userRef);
+        
+        // Get Phase 1 score from the actual Phase 1 results
+        let phaseOneCorrect = 0;
+        const quizStats = userDoc.data()?.quizStats;
+        
+        if (quizStats?.phaseOneCompleted) {
+          // Phase 1 was completed, so we have 3 questions answered
+          // Get the actual score from Phase 1 results, not from quizStats
+          phaseOneCorrect = 3; // Phase 1 always has 3 questions
+          
+          // But we should get the actual score the user got
+          // Query Phase 1 results to get the real score
+          const { collection, query, where, orderBy, limit, getDocs } = await import('firebase/firestore');
+          const phase1ResultsRef = collection(db, 'users', userId, 'quizResults');
+          const phase1Query = query(
+            phase1ResultsRef,
+            where('phase', '==', 1),
+            orderBy('timestamp', 'desc'),
+            limit(1)
+          );
+          const phase1Snapshot = await getDocs(phase1Query);
+          
+          if (!phase1Snapshot.empty) {
+            const phase1Data = phase1Snapshot.docs[0].data();
+            phaseOneCorrect = phase1Data.correctAnswers || 0;
+            console.log('📊 Phase 1 score carregado dos resultados:', phaseOneCorrect);
+          }
+        }
+        
+        setPhaseOneScore(phaseOneCorrect);
+
+        const progressRef = doc(db, 'users', userId, 'quizProgress', 'phase2');
+        const progressDoc = await getDoc(progressRef);
+
+        if (progressDoc.exists() && !progressDoc.data().deleted) {
+          const savedProgress = progressDoc.data();
+          setCurrentQuestion(savedProgress.currentQuestion || 0);
+          setScore(savedProgress.score || phaseOneCorrect); // Start with Phase 1 score
+          setAnswers(savedProgress.answers || []);
+          console.log('Progress loaded successfully!', { phaseOneScore: phaseOneCorrect });
+        } else {
+          // If no saved progress, initialize with Phase 1 score
+          setScore(phaseOneCorrect);
+          console.log('Starting Phase 2 with Phase 1 score:', phaseOneCorrect);
+        }
+      } catch (e) {
+        console.error('Erro ao carregar progresso:', e);
+      } finally {
+        setLoadingProgress(false);
+      }
+    };
+    loadProgress();
+  }, [userId]);
 
   useEffect(() => {
     const loadCharacter = async () => {
@@ -332,40 +355,102 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
     loadCharacter();
   }, [userId]); 
 
-  const saveQuizResult = async (finalScore: number, allAnswers: typeof answers) => {
+  const saveProgressAndExit = async () => {
+    try {
+      if (!userId) return;
+
+      // Ensure latest progress is saved
+      await saveProgressToFirestore(answers, score);
+
+      console.log('Progress saved successfully! Returning to menu...');
+      
+      // Navigate back to menu
+      window.location.reload(); // Simple way to go back to menu
+    } catch (e) {
+      console.error('Erro ao salvar progresso:', e);
+    }
+  };
+
+  const savePhaseTwoResult = async (phaseTwoOnlyScore: number, allAnswers: typeof answers) => {
     try {
       if (!userId) return; 
 
-      const quizResult = {
+      const phaseTwoResult = {
+        phase: 2,
         totalQuestions: shuffledQuestions.length,
         totalAnswered: allAnswers.length, 
-        correctAnswers: finalScore,
-        wrongAnswers: allAnswers.length - finalScore, 
-        percentage: Math.round((finalScore / allAnswers.length) * 100), 
+        correctAnswers: phaseTwoOnlyScore, // Only Phase 2 correct answers
+        wrongAnswers: allAnswers.length - phaseTwoOnlyScore, 
+        percentage: Math.round((phaseTwoOnlyScore / allAnswers.length) * 100), 
         answers: allAnswers,
         completedAt: new Date().toISOString(),
         timestamp: Date.now()
       };
 
-      const quizResultsRef = doc(db, 'users', userId, 'quizResults', `quiz_${Date.now()}`); 
-      await setDoc(quizResultsRef, quizResult);
+      const docId = `phase2_${Date.now()}`;
+      console.log('💾 Salvando Phase 2 com ID:', docId);
+      console.log('📋 Dados Phase 2:', {
+        phase: phaseTwoResult.phase,
+        totalQuestions: phaseTwoResult.totalQuestions,
+        correctAnswers: phaseTwoResult.correctAnswers,
+        answersCount: phaseTwoResult.answers.length,
+        questionIds: phaseTwoResult.answers.map(a => a.questionId)
+      });
 
+      const phaseTwoResultsRef = doc(db, 'users', userId, 'quizResults', docId); 
+      await setDoc(phaseTwoResultsRef, phaseTwoResult);
+      console.log('✅ Phase 2 salvo com sucesso no documento:', docId);
+
+      // RE-FETCH the current stats to ensure we have the latest data
       const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
-      const currentStats = userDoc.data()?.quizStats || { total: 0, correct: 0, wrong: 0 };
+      const userDocRefresh = await getDoc(userRef);
+      const currentStats = userDocRefresh.data()?.quizStats || { total: 0, correct: 0, wrong: 0 };
+
+      console.log('🔍 Stats ATUAIS no Firebase (antes da Phase 2):', currentStats);
+      console.log('➕ Phase 2 - Adicionando:', { 
+        total: allAnswers.length, 
+        correct: phaseTwoOnlyScore, 
+        wrong: allAnswers.length - phaseTwoOnlyScore 
+      });
+      console.log('📊 Deveria resultar em:', {
+        total: currentStats.total + allAnswers.length,
+        correct: currentStats.correct + phaseTwoOnlyScore,
+        wrong: currentStats.wrong + (allAnswers.length - phaseTwoOnlyScore)
+      });
+
+      // CRITICAL: Only add if Phase 2 hasn't been completed before
+      if (currentStats.phaseTwoCompleted) {
+        console.warn('⚠️ Phase 2 já foi completada anteriormente! Não somando novamente.');
+        return;
+      }
+
+      // Update stats - ADD Phase 2 results to existing stats (which should include Phase 1)
+      const newStats = {
+        total: currentStats.total + allAnswers.length,
+        correct: currentStats.correct + phaseTwoOnlyScore,
+        wrong: currentStats.wrong + (allAnswers.length - phaseTwoOnlyScore),
+        lastQuizDate: new Date().toISOString(),
+        phaseOneCompleted: currentStats.phaseOneCompleted || false,
+        phaseTwoCompleted: true
+      };
+
+      console.log('✅ Stats NOVOS a serem salvos:', newStats);
 
       await setDoc(userRef, {
-        quizStats: {
-          total: currentStats.total + allAnswers.length,
-          correct: currentStats.correct + finalScore,
-          wrong: currentStats.wrong + (allAnswers.length - finalScore),
-          lastQuizDate: new Date().toISOString()
-        }
+        quizStats: newStats
       }, { merge: true });
 
-      console.log('Quiz result saved successfully!');
+      // Verify the save
+      const verifyDoc = await getDoc(userRef);
+      console.log('✔️ Stats VERIFICADOS no Firebase após salvar:', verifyDoc.data()?.quizStats);
+
+      // Delete progress after completion
+      const progressRef = doc(db, 'users', userId, 'quizProgress', 'phase2');
+      await setDoc(progressRef, { deleted: true });
+
+      console.log('Phase 2 quiz result saved successfully!');
     } catch (e) {
-      console.error('Erro ao salvar resultado do quiz:', e);
+      console.error('Erro ao salvar resultado da fase 2 do quiz:', e);
     }
   };
 
@@ -385,14 +470,52 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
       setLastAnswerWasIncorrect(true);
     }
 
-    setAnswers([...answers, {
+    const newAnswers = [...answers, {
       questionId: question.id,
       selected: selectedAnswer,
       correct: question.correctAnswer,
       isCorrect: isCorrect
-    }]);
+    }];
 
+    setAnswers(newAnswers);
     setShowResult(true);
+
+    // Auto-save progress after each answer
+    // Save current Phase 2 score (total score - Phase 1 score)
+    const phaseTwoScore = isCorrect ? (score + 1 - phaseOneScore) : (score - phaseOneScore);
+    saveProgressToFirestore(newAnswers, isCorrect ? score + 1 : score, phaseTwoScore);
+  };
+
+  const saveProgressToFirestore = async (currentAnswers: typeof answers, totalScore: number, phaseTwoScore?: number, questionIndex?: number) => {
+    try {
+      if (!userId) return;
+
+      const progressData = {
+        phase: 2,
+        currentQuestion: questionIndex !== undefined ? questionIndex : currentQuestion,
+        score: totalScore, // Total score including Phase 1
+        phaseTwoScore: phaseTwoScore !== undefined ? phaseTwoScore : (totalScore - phaseOneScore), // Only Phase 2 score
+        answers: currentAnswers,
+        totalQuestions: shuffledQuestions.length,
+        lastSaved: new Date().toISOString(),
+        timestamp: Date.now()
+      };
+
+      console.log('Salvando progresso da Phase 2:', {
+        questionsAnswered: currentAnswers.length,
+        totalScore,
+        phaseTwoScore: progressData.phaseTwoScore,
+        phaseOneScore,
+        nextQuestion: progressData.currentQuestion
+      });
+
+      const progressRef = doc(db, 'users', userId, 'quizProgress', 'phase2');
+      await setDoc(progressRef, progressData);
+      
+      console.log('Progresso salvo com sucesso!');
+    } catch (e) {
+      console.error('Erro ao auto-salvar progresso:', e);
+    }
   };
 
   const handleNext = () => {
@@ -401,24 +524,32 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
     setAnswered(false);
 
     if (currentQuestion < shuffledQuestions.length - 1) { 
+      const nextQuestion = currentQuestion + 1;
       if (lastAnswerWasIncorrect) {
         setShowDictionary(true); 
         setLastAnswerWasIncorrect(false); 
       } else {
-        setCurrentQuestion(currentQuestion + 1); 
+        setCurrentQuestion(nextQuestion); 
       }
+      // Save progress with the next question index
+      const phaseTwoScore = score - phaseOneScore;
+      saveProgressToFirestore(answers, score, phaseTwoScore, nextQuestion);
     } else {
       // Calculate final score from answers array to ensure accuracy
-      const finalScore = answers.filter(a => a.isCorrect).length;
-      saveQuizResult(finalScore, answers);
-      onComplete(finalScore, shuffledQuestions.length);
+      const phaseTwoOnlyScore = answers.filter(a => a.isCorrect).length;
+      const finalTotalScore = phaseOneScore + phaseTwoOnlyScore;
+      
+      console.log('🎯 Finalizando Phase 2:', {
+        phaseOneScore,
+        phaseTwoOnlyScore,
+        finalTotalScore,
+        totalQuestions: shuffledQuestions.length
+      });
+      
+      savePhaseTwoResult(phaseTwoOnlyScore, answers); // Pass ONLY Phase 2 score
+      // Pass total accumulated score, Phase 2 score only, and total Phase 2 questions
+      onComplete(finalTotalScore, phaseTwoOnlyScore, shuffledQuestions.length);
     }
-  };
-  const handleFinishEarly = () => {
-    // Calculate final score from answers array to ensure accuracy
-    const finalScore = answers.filter(a => a.isCorrect).length;
-    saveQuizResult(finalScore, answers);
-    onComplete(finalScore, shuffledQuestions.length);
   };
 
   const handleDictionaryClose = () => {
@@ -433,7 +564,15 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
 
   return (
     <>
-      <div className="py-8">
+      {loadingProgress ? (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Carregando progresso...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="py-8">
         <Card className="max-w-3xl mx-auto p-6 sm:p-8 shadow-xl">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -452,14 +591,17 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
                   </div>
                 )}
                 <div>
-                  <p className="text-gray-800">
+                  <p className="text-gray-800 font-semibold">
                     {userData.name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Fase 2 - Aprofundamento
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 bg-amber-100 px-4 py-2 rounded-full">
                 <Trophy className="w-5 h-5 text-gray-900" />
-                <span className="text-gray-900">{score} pontos</span>
+                <span className="text-gray-900 font-semibold">{score} pontos</span>
               </div>
             </div>
             
@@ -472,7 +614,6 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
             </div>
           </div>
 
-          {}
           <AnimatePresence mode="wait">
             <motion.div
               key={currentQuestion}
@@ -481,15 +622,16 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {}
               <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-xl mb-4 border-2 border-amber-200">
                 <p className="text-sm text-gray-600 mb-2">
-                  {question.perspective === 'aggressor' ? '🤔 Você como agressor:' : '👥 Você como testemunha:'}
+                  {question.perspective === 'aggressor' ? '🤔 Você como agressor:' : 
+                   question.perspective === 'victim' ? '😔 Você como vítima:' : 
+                   '👥 Você como testemunha:'}
                 </p>
                 <p className="text-gray-800 mb-3">
                   {question.situation}
                 </p>
-                <h3 className="text-gray-900">
+                <h3 className="text-gray-900 font-semibold">
                   {question.question}
                 </h3>
               </div>
@@ -562,7 +704,7 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
                       <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
                     )}
                     <div>
-                      <p className={selectedAnswer === question.correctAnswer ? 'text-green-800' : 'text-red-800'}>
+                      <p className={`font-semibold ${selectedAnswer === question.correctAnswer ? 'text-green-800' : 'text-red-800'}`}>
                         {selectedAnswer === question.correctAnswer ? 'Muito bem! Resposta correta!' : 'Vamos refletir sobre isso.'}
                       </p>
                       <p className="text-gray-700 mt-2">
@@ -572,46 +714,45 @@ export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
                   </div>
                 </motion.div>
               )}
-              <div className="flex justify-end gap-3">
-                {!showResult ? (
-                  <Button 
-                    onClick={handleAnswer}
-                    disabled={selectedAnswer === null}
-                    className="px-8 bg-gray-900 hover:bg-gray-800 text-amber-400"
-                  >
-                    Responder
-                  </Button>
-                ) : (
-                  <>
-                    {currentQuestion >= 2 && currentQuestion < shuffledQuestions.length - 1 && (
-                        <Button
-                            onClick={handleFinishEarly}
-                            variant="outline"
-                            className="px-8"
-                        >
-                            Ir para o Menu
-                        </Button>
-                    )}
+
+              <div className="flex justify-between gap-3">
+                <Button 
+                  onClick={saveProgressAndExit}
+                  variant="outline"
+                  className="px-6"
+                >
+                  Continuar Depois
+                </Button>
+                <div className="flex gap-3">
+                  {!showResult ? (
                     <Button 
-                        onClick={handleNext}
-                        className="px-8 bg-gray-900 hover:bg-gray-800 text-amber-400"
+                      onClick={handleAnswer}
+                      disabled={selectedAnswer === null}
+                      className="px-8 bg-gray-900 hover:bg-gray-800 text-amber-400"
                     >
-                        {currentQuestion < shuffledQuestions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultado'}
+                      Responder
                     </Button>
-                  </>
-                )}
+                  ) : (
+                    <Button 
+                      onClick={handleNext}
+                      className="px-8 bg-gray-900 hover:bg-gray-800 text-amber-400"
+                    >
+                      {currentQuestion < shuffledQuestions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultado'}
+                    </Button>
+                  )}
+                </div>
               </div>
             </motion.div>
           </AnimatePresence>
         </Card>
-      </div>
 
-      {}
-      <DictionaryPopup
-        isOpen={showDictionary}
-        onClose={handleDictionaryClose}
-        entry={getDictionaryEntry()}
-      />
+        <DictionaryPopup
+          isOpen={showDictionary}
+          onClose={handleDictionaryClose}
+          entry={getDictionaryEntry()}
+        />
+      </div>
+      )}
     </>
   );
 }
