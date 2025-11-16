@@ -36,75 +36,63 @@ export default function App() {
 
   // Monitorar mudanças de autenticação
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUserId(currentUser.uid);
-        setUserData((prev) => ({ ...prev, email: currentUser.email || '' }));
-        setIsUserAuthenticated(true);
+  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    if (currentUser) {
+      setUserId(currentUser.uid);
+      setUserData((prev) => ({ ...prev, email: currentUser.email || '' }));
+      setIsUserAuthenticated(true);
 
-        // Buscar dados do perfil no Firestore
-        try {
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          const charDoc = await getDoc(doc(db, 'characters', currentUser.uid));
+      try {
+        const userDocRef = doc(db, 'users', currentUser.uid)
+        const charDocRef = doc(db, 'characters', currentUser.uid)
+
+        const [userDoc, charDoc] = await Promise.all([
+          getDoc(userDocRef),
+          getDoc(charDocRef)
+        ]);
+        
+        if (userDoc.exists()) {
+          const userDataFromDB = userDoc.data(); 
+          setUserData((prev) => ({
+            ...prev,
+            name: userDataFromDB.name || '',
+            age: userDataFromDB.age || 0,
+            email: currentUser.email || '',
+          }));
           
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
+          if (charDoc.exists()) {
+            const charData = charDoc.data();
             setUserData((prev) => ({
               ...prev,
-              name: userData.name || '',
-              age: userData.age || 0,
-              email: currentUser.email || '',
+              avatar: `${charData.gender}-${charData.hairId}`,
             }));
-            
-            // Se já tem personagem criado, verificar se já respondeu o quiz
-            if (charDoc.exists()) {
-              const charData = charDoc.data();
-              setUserData((prev) => ({
-                ...prev,
-                avatar: `${charData.gender}-${charData.hairId}`,
-              }));
 
-              // Verificar se o usuário já respondeu o quiz
-              try {
-                const quizResultsRef = await getDoc(
-                  doc(db, 'users', currentUser.uid)
-                );
-                const hasCompletedQuiz = quizResultsRef.data()?.quizStats?.lastQuizDate;
+            const hasCompletedQuiz = userDataFromDB?.quizStats?.lastQuizDate;
 
-                if (hasCompletedQuiz) {
-                  // Já respondeu o quiz, vai direto para o menu
-                  setCurrentStep('menu');
-                } else {
-                  // Ainda não respondeu, vai para o quiz
-                  setCurrentStep('quiz');
-                }
-              } catch (quizError) {
-                console.error('Erro ao verificar quiz:', quizError);
-                // Em caso de erro, vai para o quiz
-                setCurrentStep('quiz');
-              }
+            if (hasCompletedQuiz) {
+              setCurrentStep('menu');
             } else {
-              // Se tem perfil mas sem personagem, vai para seleção de avatar
-              setCurrentStep('avatar');
+              setCurrentStep('quiz');
             }
           } else {
-            // Se não tem perfil, mostra o formulário
-            setCurrentStep('profile');
+            setCurrentStep('avatar');
           }
-        } catch (error) {
-          console.error('Erro ao buscar dados do usuário:', error);
-          // Em caso de erro, mostra o formulário
+        } else {
           setCurrentStep('profile');
         }
-      } else {
-        setIsUserAuthenticated(false);
-        setCurrentStep('auth');
-        setUserId(null);
+      } catch (error) {
+        console.error('Erro ao buscar dados do usuário:', error);
+        setCurrentStep('profile');
       }
-    });
+    } else {
+      setIsUserAuthenticated(false);
+      setCurrentStep('auth');
+      setUserId(null);
+    }
+  });
 
-    return unsubscribe;
-  }, []);
+  return unsubscribe;
+}, []);
 
   const handleAuthComplete = (userId: string) => {
     setUserId(userId);
@@ -138,27 +126,31 @@ export default function App() {
     setUserId(null);
   };
 
-  const navigateTo = (step: GameStep) => {
-    // Bloquear tentativa de navegar para quiz se já foi respondido
-    if (step === 'quiz') {
-      // Verificar se o usuário já respondeu o quiz
-      const userDocRef = doc(db, 'users', userId || '');
-      getDoc(userDocRef).then((userDoc) => {
-        const hasCompletedQuiz = userDoc.data()?.quizStats?.lastQuizDate;
-        if (hasCompletedQuiz) {
-          console.warn('Usuário já respondeu o quiz. Acesso bloqueado.');
-          return; // Bloqueia o acesso
-        } else {
-          setCurrentStep(step);
-        }
-      }).catch((error) => {
-        console.error('Erro ao verificar quiz:', error);
+
+const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
+  const forceNavigation = options?.force || false;
+
+  // Bloquear tentativa de navegar para quiz se já foi respondido
+  if (step === 'quiz' && !forceNavigation) { 
+    // Verificar se o usuário já respondeu o quiz
+    const userDocRef = doc(db, 'users', userId || '');
+    getDoc(userDocRef).then((userDoc) => {
+      const hasCompletedQuiz = userDoc.data()?.quizStats?.lastQuizDate;
+      if (hasCompletedQuiz) {
+        console.warn('Usuário já respondeu o quiz. Acesso bloqueado.');
+        return; // Bloqueia o acesso
+      } else {
         setCurrentStep(step);
-      });
-    } else {
+      }
+    }).catch((error) => {
+      console.error('Erro ao verificar quiz:', error);
       setCurrentStep(step);
-    }
-  };
+    });
+  } else {
+
+    setCurrentStep(step);
+  }
+};
 
   // Keep the existing app UI as the root element for the default route
   const appMain = (
@@ -173,8 +165,12 @@ export default function App() {
         {currentStep === 'avatar' && (
           <AvatarSelection userName={userData.name} onComplete={handleAvatarComplete} />
         )}
-        {currentStep === 'quiz' && (
-          <QuizGame userData={userData} onComplete={handleQuizComplete} />
+        {currentStep === 'quiz' && userId && ( // Adicionada verificação '&& userId', aumentar segurança.
+          <QuizGame 
+            userId={userId}
+            userData={userData} 
+            onComplete={handleQuizComplete} 
+          />
         )}
         {currentStep === 'result' && (
           <ResultScreen 

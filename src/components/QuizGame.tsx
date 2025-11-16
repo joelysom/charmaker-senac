@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
@@ -11,6 +11,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import Avatar3D from './Avatar3D';
 
 type QuizGameProps = {
+  userId: string; 
   userData: UserData;
   onComplete: (score: number) => void;
 };
@@ -19,7 +20,7 @@ type Question = {
   id: number;
   situation: string;
   question: string;
-  perspective: 'aggressor' | 'witness';
+  perspective: 'aggressor' | 'witness' | 'victim';
   options: string[];
   correctAnswer: number;
   explanation: string;
@@ -32,47 +33,49 @@ type DictionaryEntry = {
 };
 
 const questions: Question[] = [
-  {
+    {
     id: 1,
-    situation: 'Você está em uma reunião e faz um comentário dizendo "você é muito articulado para uma pessoa negra" para um colega.',
-    question: 'Você percebe que cometeu um erro. Como deve agir?',
+    situation: 'Você escolhe não contratar uma pessoa negra porque acha que ela “não combina com o perfil da empresa”.',
+    question: 'Essa atitude pode ser considerada:',
     perspective: 'aggressor',
     options: [
-      'Pedir desculpas sinceras, explicar que foi preconceituoso e comprometer-se a aprender',
-      'Dizer "foi só um elogio, você está sendo sensível demais"',
-      'Ignorar e fingir que nada aconteceu',
-      'Justificar dizendo "eu tenho amigos negros, não sou racista"'
+      'Racismo estrutural.',
+      'Uma escolha pessoal.',
+      'Preconceito inconsciente.',
+      'Nenhuma das anteriores.'
     ],
     correctAnswer: 0,
-    explanation: 'Reconhecer o erro, pedir desculpas genuínas e se comprometer a mudar é essencial. Comentários que demonstram surpresa com a capacidade de pessoas negras são preconceituosos e reforçam estereótipos.'
+    //Verificar correção dessas 3 primeiras questões, solicitar explicação
+    explanation: 'Racismo estrutural'
   },
   {
     id: 2,
-    situation: 'Seu amigo negro conta que foi seguido por seguranças em uma loja enquanto fazia compras.',
-    question: 'Como você se sentiria e o que deveria fazer como amigo?',
-    perspective: 'witness',
+    situation: 'Você entra em uma loja de grife no shopping e percebe que além de não ter ninguém querendo lhe atender passa a ser seguido apenas por causa do tom de sua pele.',
+    question: 'O que você pode fazer?',
+    perspective: 'victim',
     options: [
-      'Acreditar e validar sua experiência, oferecer apoio e questionar o racismo dessa prática',
-      'Dizer "talvez você estava parecendo suspeito, não leve para o lado pessoal"',
-      'Mudar de assunto porque é desconfortável',
-      'Dizer "isso acontece com todo mundo, não é racismo"'
+      'Denunciar o ocorrido.',
+      'Ignorar e ir embora.',
+      'Questionar o motivo.',
+      'Ficar em silêncio para evitar problemas.'
     ],
     correctAnswer: 0,
-    explanation: 'Quando alguém relata uma experiência de racismo, devemos acreditar, validar seus sentimentos e oferecer apoio. Minimizar ou questionar a experiência é uma forma de violência.'
+    //Verificar correção dessas 3 primeiras questões, solicitar explicação
+    explanation: 'Denunciar o ocorrido.'
   },
   {
     id: 3,
-    situation: 'Você tocou no cabelo de uma colega negra sem pedir permissão durante uma conversa.',
-    question: 'Ela demonstra desconforto. O que você deveria fazer?',
-    perspective: 'aggressor',
+    situation: 'Você presencia um colega sendo  discriminado ao realizar certo tipo de atividade em por sua cor de pele.',
+    question: 'O que você faz?',
+    perspective: 'witness',
     options: [
-      'Pedir desculpas imediatamente e reconhecer que invadiu seu espaço pessoal',
-      'Dizer "relaxa, era só curiosidade, seu cabelo é tão diferente"',
-      'Se ofender porque "foi só um carinho"',
-      'Continuar tocando explicando que é um elogio'
+      'Apoia o colega e denuncia o agressor.',
+      'Finge que não viu.',
+      'Ri junto com os outros.',
+      'Espera que alguém tome uma atitude.'
     ],
     correctAnswer: 0,
-    explanation: 'Tocar no cabelo de pessoas negras sem consentimento é invasivo e desrespeitoso. Cabelos crespos não são objetos de curiosidade. Sempre peça permissão e respeite os limites pessoais.'
+    explanation: 'Apoia o colega e denuncia o agressor'
   },
   {
     id: 4,
@@ -137,7 +140,7 @@ const questions: Question[] = [
     perspective: 'witness',
     options: [
       'Sentir indignação, intervir educadamente corrigindo o erro e apoiar a mulher',
-      'Pensar "que situação constrangedora" mas não fazer nada',
+      'Pensar "que situação constrangededora" mas não fazer nada',
       'Achar engraçado internamente',
       'Ignorar completamente'
     ],
@@ -272,7 +275,32 @@ const dictionaryEntries: DictionaryEntry[] = [
   }
 ];
 
-export function QuizGame({ userData, onComplete }: QuizGameProps) {
+function shuffleArray(array: any[]) {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+}
+
+function processAndShuffleQuestions(questionsToShuffle: Question[]): Question[] {
+  return questionsToShuffle.map(question => {
+    const correctText = question.options[question.correctAnswer];
+    const shuffledOptions = shuffleArray(question.options);
+    const newCorrectIndex = shuffledOptions.findIndex(option => option === correctText);
+    return {
+      ...question,
+      options: shuffledOptions,
+      correctAnswer: newCorrectIndex,
+    };
+  });
+}
+
+// Componente
+export function QuizGame({ userId, userData, onComplete }: QuizGameProps) {
+  
+  const [shuffledQuestions] = useState(() => processAndShuffleQuestions(questions));
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -282,17 +310,16 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
   const [character, setCharacter] = useState<any>(null);
   const [loadingCharacter, setLoadingCharacter] = useState(true);
   const [answers, setAnswers] = useState<Array<{ questionId: number; selected: number; correct: number; isCorrect: boolean }>>([]);
+  const [lastAnswerWasIncorrect, setLastAnswerWasIncorrect] = useState(false);
 
-  // Load character data from Firestore
   useEffect(() => {
     const loadCharacter = async () => {
       try {
-        const user = auth.currentUser;
-        if (!user) {
+        if (!userId) { 
           setLoadingCharacter(false);
           return;
         }
-        const charDoc = await getDoc(doc(db, 'characters', user.uid));
+        const charDoc = await getDoc(doc(db, 'characters', userId)); 
         if (charDoc.exists()) {
           setCharacter(charDoc.data());
         }
@@ -303,38 +330,35 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
       }
     }
     loadCharacter();
-  }, []);
+  }, [userId]); 
 
-  // Save quiz result to Firestore
   const saveQuizResult = async (finalScore: number, allAnswers: typeof answers) => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
+      if (!userId) return; 
 
       const quizResult = {
-        totalQuestions: questions.length,
+        totalQuestions: shuffledQuestions.length,
+        totalAnswered: allAnswers.length, 
         correctAnswers: finalScore,
-        wrongAnswers: questions.length - finalScore,
-        percentage: Math.round((finalScore / questions.length) * 100),
+        wrongAnswers: allAnswers.length - finalScore, 
+        percentage: Math.round((finalScore / allAnswers.length) * 100), 
         answers: allAnswers,
         completedAt: new Date().toISOString(),
         timestamp: Date.now()
       };
 
-      // Save to users/{uid}/quizResults
-      const quizResultsRef = doc(db, 'users', user.uid, 'quizResults', `quiz_${Date.now()}`);
+      const quizResultsRef = doc(db, 'users', userId, 'quizResults', `quiz_${Date.now()}`); 
       await setDoc(quizResultsRef, quizResult);
 
-      // Also update user document with latest quiz stats
-      const userRef = doc(db, 'users', user.uid);
+      const userRef = doc(db, 'users', userId);
       const userDoc = await getDoc(userRef);
       const currentStats = userDoc.data()?.quizStats || { total: 0, correct: 0, wrong: 0 };
 
       await setDoc(userRef, {
         quizStats: {
-          total: currentStats.total + questions.length,
+          total: currentStats.total + allAnswers.length,
           correct: currentStats.correct + finalScore,
-          wrong: currentStats.wrong + (questions.length - finalScore),
+          wrong: currentStats.wrong + (allAnswers.length - finalScore),
           lastQuizDate: new Date().toISOString()
         }
       }, { merge: true });
@@ -345,8 +369,8 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
     }
   };
 
-  const progress = ((currentQuestion + 1) / questions.length) * 100;
-  const question = questions[currentQuestion];
+  const progress = ((currentQuestion + 1) / shuffledQuestions.length) * 100;
+  const question = shuffledQuestions[currentQuestion];
 
   const handleAnswer = () => {
     if (selectedAnswer === null) return;
@@ -356,9 +380,11 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
     
     if (isCorrect) {
       setScore(score + 1);
+      setLastAnswerWasIncorrect(false);
+    } else {
+      setLastAnswerWasIncorrect(true);
     }
 
-    // Store this answer
     setAnswers([...answers, {
       questionId: question.id,
       selected: selectedAnswer,
@@ -374,18 +400,21 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
     setSelectedAnswer(null);
     setAnswered(false);
 
-    if (currentQuestion < questions.length - 1) {
-      // Mostrar dicionário a cada 3 perguntas
-      if ((currentQuestion + 1) % 3 === 0) {
-        setShowDictionary(true);
+    if (currentQuestion < shuffledQuestions.length - 1) { 
+      if (lastAnswerWasIncorrect) {
+        setShowDictionary(true); 
+        setLastAnswerWasIncorrect(false); 
       } else {
-        setCurrentQuestion(currentQuestion + 1);
+        setCurrentQuestion(currentQuestion + 1); 
       }
     } else {
-      // Save quiz result before completing
       saveQuizResult(score, answers);
       onComplete(score);
     }
+  };
+  const handleFinishEarly = () => {
+    saveQuizResult(score, answers);
+    onComplete(score);
   };
 
   const handleDictionaryClose = () => {
@@ -402,7 +431,6 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
     <>
       <div className="py-8">
         <Card className="max-w-3xl mx-auto p-6 sm:p-8 shadow-xl">
-          {/* Header */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -433,14 +461,14 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
             
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-gray-600">
-                <span>Questão {currentQuestion + 1} de {questions.length}</span>
+                <span>Questão {currentQuestion + 1} de {shuffledQuestions.length}</span>
                 <span>{Math.round(progress)}%</span>
               </div>
               <Progress value={progress} className="h-2" />
             </div>
           </div>
 
-          {/* Question */}
+          {}
           <AnimatePresence mode="wait">
             <motion.div
               key={currentQuestion}
@@ -449,6 +477,7 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
+              {}
               <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-xl mb-4 border-2 border-amber-200">
                 <p className="text-sm text-gray-600 mb-2">
                   {question.perspective === 'aggressor' ? '🤔 Você como agressor:' : '👥 Você como testemunha:'}
@@ -461,7 +490,6 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
                 </h3>
               </div>
 
-              {/* Options */}
               <div className="space-y-3 mb-6">
                 {question.options.map((option, index) => (
                   <button
@@ -511,7 +539,6 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
                 ))}
               </div>
 
-              {/* Result Feedback */}
               {showResult && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -541,8 +568,6 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
                   </div>
                 </motion.div>
               )}
-
-              {/* Action Buttons */}
               <div className="flex justify-end gap-3">
                 {!showResult ? (
                   <Button 
@@ -553,12 +578,23 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
                     Responder
                   </Button>
                 ) : (
-                  <Button 
-                    onClick={handleNext}
-                    className="px-8 bg-gray-900 hover:bg-gray-800 text-amber-400"
-                  >
-                    {currentQuestion < questions.length - 1 ? 'Próxima' : 'Ver Resultado'}
-                  </Button>
+                  <>
+                    {currentQuestion >= 2 && currentQuestion < shuffledQuestions.length - 1 && (
+                        <Button
+                            onClick={handleFinishEarly}
+                            variant="outline"
+                            className="px-8"
+                        >
+                            Ir para o Menu
+                        </Button>
+                    )}
+                    <Button 
+                        onClick={handleNext}
+                        className="px-8 bg-gray-900 hover:bg-gray-800 text-amber-400"
+                    >
+                        {currentQuestion < shuffledQuestions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultado'}
+                    </Button>
+                  </>
                 )}
               </div>
             </motion.div>
@@ -566,7 +602,7 @@ export function QuizGame({ userData, onComplete }: QuizGameProps) {
         </Card>
       </div>
 
-      {/* Dictionary Popup */}
+      {}
       <DictionaryPopup
         isOpen={showDictionary}
         onClose={handleDictionaryClose}
