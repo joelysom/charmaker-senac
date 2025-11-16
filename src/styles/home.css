@@ -16,7 +16,9 @@ html,body,#root{
   justify-content:center;
   padding:20px;
   height:100vh;
-  background: linear-gradient(180deg, #051f4d 0%, var(--bg) 100%);
+  background-image: url('/bgsala.png');
+  background-size: cover;
+  background-repeat: no-repeat;
   box-sizing:border-box;
 }
 
@@ -338,14 +340,14 @@ html,body,#root{
   left: 50%;
   transform: translate(-50%, -50%);
   display:flex;
-  gap:16px;
+  gap:150px;
   z-index:20;
 }
 .preset-arrows button{
   /* Keep large touch target, but remove visible chrome (transparent background, no border/shadow)
      so the PNG icon feels floating — the glow will be applied to the image itself on hover */
   width: 100px;
-  height: 156px;
+  height: 100px;
   border-radius:10px;
   border: none;
   background: transparent;
@@ -357,9 +359,9 @@ html,body,#root{
   transition: transform 0.18s ease;
 }
 .preset-arrows button img{
-  width: 132px;
-  height: 132px;
-  object-fit: contain;
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
   transition: filter 200ms ease, transform 200ms ease;
   /* render the PNG as-is; glow will be added on hover */
 }
