@@ -10,6 +10,7 @@ import { IoMdClose } from 'react-icons/io'
 import '../styles/home.css'
 import { auth, db } from '../firebase/firebase'
 import { doc, getDoc } from 'firebase/firestore'
+import { color } from 'motion'
 
 // Main menu sections
 const MAIN_SECTIONS = [
@@ -23,9 +24,9 @@ const MAIN_SECTIONS = [
         title: 'Corpos',
         icon: GiLargeDress,
         options: [
-          { id: 'body1', label: 'Tipo 1' },
-          { id: 'body2', label: 'Tipo 2' },
-          { id: 'body3', label: 'Tipo 3' }
+          { id: 'body1', img: '/MALE_READY/BODY/CORPO_0.png'},
+          { id: 'body2' ,img: '/MALE_READY/BODY/CORPO_1.png' },
+          { id: 'body3', img: '/MALE_READY/BODY/CORPO_2.png'}
         ]
       },
       {
@@ -33,11 +34,11 @@ const MAIN_SECTIONS = [
         title: 'Cor da Pele',
         icon: GiLargeDress,
         options: [
-          { id: 'skin1', label: 'Preto' },
-          { id: 'skin2', label: 'Pardo' },
-          { id: 'skin3', label: 'Indigena' },
-          { id: 'skin4', label: 'Amarelo' },
-          { id: 'skin5', label: 'Branco' }
+          { id: 'skin1'  , img: '/MALE_READY/COLOR/preta.png'},
+          { id: 'skin2', img: '/MALE_READY/COLOR/parda.png'},
+          { id: 'skin3',  img: '/MALE_READY/COLOR/indigina.png'},
+          { id: 'skin4', img: '/MALE_READY/COLOR/amarela.png' },
+          { id: 'skin5', img: '/MALE_READY/COLOR/branca.png' }
         ]
       }
     ]
@@ -47,11 +48,11 @@ const MAIN_SECTIONS = [
     title: 'Rosto',
     icon: GiLargeDress,
     options: [
-      { id: 'face1', label: 'A1' },
-      { id: 'face2', label: 'A2' },
-      { id: 'face3', label: 'A3' },
-      { id: 'face4', label: 'A4' },
-      { id: 'face5', label: 'A5' }
+      { id: 'face1',img: '/MALE_READY/MALE_FACE/A1.png'},
+      { id: 'face2', img: '/MALE_READY/MALE_FACE/A2.png' },
+      { id: 'face3',  img: '/MALE_READY/MALE_FACE/A3.png'},
+      { id: 'face4',  img: '/MALE_READY/MALE_FACE/A4.png'},
+      { id: 'face5',  img: '/MALE_READY/MALE_FACE/A5.png'}
     ]
   },
   {
@@ -64,11 +65,11 @@ const MAIN_SECTIONS = [
         title: 'Cabelos Culturais',
         icon: GiLargeDress,
         options: [
-          { id: 4, label: '1' },
-          { id: 5, label: '2' },
-          { id: 6, label: '3' },
-          { id: 7, label: '4' },
-          { id: 13, label: '5' }
+          { id: 4,  img: '/MALE_READY/MALE_HAIR/Culturais/c0.png' },
+          { id: 5, img: '/MALE_READY/MALE_HAIR/Culturais/c1.png' },
+          { id: 6, img: '/MALE_READY/MALE_HAIR/Culturais/c2.png' },
+          { id: 7,  img: '/MALE_READY/MALE_HAIR/Culturais/c3.png' },
+          { id: 13,  img: '/MALE_READY/MALE_HAIR/Culturais/c4.png' }
         ]
       },
       {
@@ -76,8 +77,8 @@ const MAIN_SECTIONS = [
         title: 'Cacheado',
         icon: GiHairStrands,
         options: [
-          { id: 8, label: '1' },
-          { id: 9, label: '2' }
+          { id: 8, img: '/MALE_READY/MALE_HAIR/Cacheados/c0.png'},
+          { id: 9, img: '/MALE_READY/MALE_HAIR/Cacheados/c1.png' }
         ]
       },
       {
@@ -85,8 +86,8 @@ const MAIN_SECTIONS = [
         title: 'Crespo',
         icon: GiHairStrands,
         options: [
-          { id: 10, label: '1' },
-          { id: 11, label: '2' }
+          { id: 10,  img:'/MALE_READY/MALE_HAIR/Crespos/c0.png' },
+          { id: 11,  img:'/MALE_READY/MALE_HAIR/Crespos/c1.png' }
         ]
       },
       {
@@ -95,10 +96,10 @@ const MAIN_SECTIONS = [
         icon: GiHairStrands,
         // merged with previous "Cabelos Lisos" options (1..3)
         options: [
-          { id: 1, label: '1' },
-          { id: 2, label: '2' },
-          { id: 3, label: '3' },
-          { id: 12, label: '4' }
+          { id: 1, img: '/MALE_READY/MALE_HAIR/Lisos/c0.png'},
+          { id: 2,img: '/MALE_READY/MALE_HAIR/Lisos/c1.png'},
+          { id: 3,img: '/MALE_READY/MALE_HAIR/Lisos/c2.png'},
+          { id: 12, img: '/MALE_READY/MALE_HAIR/Lisos/c3.png'}
         ]
       },
       {
@@ -106,9 +107,9 @@ const MAIN_SECTIONS = [
         title: 'Ondulado',
         icon: GiHairStrands,
         options: [
-          { id: 14, label: '1' },
-          { id: 15, label: '2' },
-          { id: 16, label: '3' }
+          { id: 14, img: '/MALE_READY/MALE_HAIR/Ondulados/c0.png'},
+          { id: 15,img: '/MALE_READY/MALE_HAIR/Ondulados/c1.png' },
+          { id: 16,img: '/MALE_READY/MALE_HAIR/Ondulados/c2.png'}
         ]
       }
     ]
@@ -799,6 +800,7 @@ function Home({ onDone }) {
                     key={section.id}
                     className="section-card"
                     onClick={() => { setSelectedSection(section.id); setSelectedSubSection(null) }}
+                    
                   >
                     <section.icon size={24} />
                     <span>{section.title}</span>
@@ -864,6 +866,7 @@ function Home({ onDone }) {
                             <button
                               key={option.id}
                               className={`option-button ${selectedHair === option.id ? 'active' : ''}`}
+                              style={{ backgroundImage: option.img ? `url(${option.img})` : 'none', backgroundSize: 'cover' }}
                               onClick={() => {
                                 if (selectedSection === 'hair') {
                                   setSelectedHair(option.id)
@@ -893,8 +896,9 @@ function Home({ onDone }) {
                               key={option.id}
                               className={`option-button ${selectedFaceOption === option.id ? 'active' : ''}`}
                               onClick={() => setSelectedFaceOption(option.id)}
+                              style={{ backgroundImage: option.img ? `url(${option.img})` : 'none', backgroundSize: 'cover' }}
                             >
-                              {option.label}
+                              
                             </button>
                           ))}
                         </div>

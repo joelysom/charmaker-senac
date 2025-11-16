@@ -23,9 +23,9 @@ const MAIN_SECTIONS = [
         title: 'Corpos',
         icon: GiLargeDress,
         options: [
-          { id: 'body1', label: 'Tipo 1' },
-          { id: 'body2', label: 'Tipo 2' },
-          { id: 'body3', label: 'Tipo 3' }
+          { id: 'body1',  img:'/FEMALE_READY/FEMALE_BODY/BODY_0.png' },
+          { id: 'body2',  img:'/FEMALE_READY/FEMALE_BODY/BODY_1.png' },
+          { id: 'body3',  img:'/FEMALE_READY/FEMALE_BODY/BODY_2.png' }
         ]
       },
       {
@@ -33,11 +33,11 @@ const MAIN_SECTIONS = [
         title: 'Cor da Pele',
         icon: GiLargeDress,
         options: [
-          { id: 'skin1', label: 'Preto' },
-          { id: 'skin2', label: 'Pardo' },
-          { id: 'skin3', label: 'Indigena' },
-          { id: 'skin4', label: 'Amarelo' },
-          { id: 'skin5', label: 'Branco' }
+          { id: 'skin1',  img:'/FEMALE_READY/COLOR/preta.png' },
+          { id: 'skin2',  img:'/FEMALE_READY/COLOR/parda.png' },
+          { id: 'skin3',  img:'/FEMALE_READY/COLOR/indigina.png' },
+          { id: 'skin4', img:'/FEMALE_READY/COLOR/amarela.png'},
+          { id: 'skin5' , img:'/FEMALE_READY/COLOR/branca.png'}
         ]
       }
     ]
@@ -47,11 +47,11 @@ const MAIN_SECTIONS = [
     title: 'Rosto',
     icon: GiLargeDress,
     options: [
-      { id: 'face1', label: 'A1' },
-      { id: 'face2', label: 'A2' },
-      { id: 'face3', label: 'A3' },
-      { id: 'face4', label: 'A4' },
-      { id: 'face5', label: 'A5' }
+      { id: 'face1',  img:'/FEMALE_READY/FEMALE_FACE/A1.png' },
+      { id: 'face2',  img:'/FEMALE_READY/FEMALE_FACE/A2.png' },
+      { id: 'face3',  img:'/FEMALE_READY/FEMALE_FACE/A3.png'},
+      { id: 'face4',  img:'/FEMALE_READY/FEMALE_FACE/A4.png' },
+      { id: 'face5', img:'/FEMALE_READY/FEMALE_FACE/A5.png' }
     ]
   },
   {
@@ -64,11 +64,11 @@ const MAIN_SECTIONS = [
         title: 'Cabelos Culturais',
         icon: GiLargeDress,
         options: [
-          { id: 4, label: '1' },
-          { id: 5, label: '2' },
-          { id: 6, label: '3' },
-          { id: 7, label: '4' },
-          { id: 13, label: '5' }
+          { id: 4,img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C0.png' },
+          { id: 5,img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C1.png'},
+          { id: 6,img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C2.png'},
+          { id: 7, img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C3.png' },
+          { id: 13, img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C4.png' }
         ]
       },
       {
@@ -76,8 +76,8 @@ const MAIN_SECTIONS = [
         title: 'Cacheado',
         icon: GiHairStrands,
         options: [
-          { id: 8, label: '1' },
-          { id: 9, label: '2' }
+          { id: 8, img:'/FEMALE_READY/FEMALE_HAIR/Cacheados/C0.png' },
+          { id: 9, img:'/FEMALE_READY/FEMALE_HAIR/Cacheados/C1.png' }
         ]
       },
       {
@@ -85,8 +85,8 @@ const MAIN_SECTIONS = [
         title: 'Crespo',
         icon: GiHairStrands,
         options: [
-          { id: 10, label: '1' },
-          { id: 11, label: '2' }
+          { id: 10, img:'/FEMALE_READY/FEMALE_HAIR/Crespos/C0.png' },
+          { id: 11, img:'/FEMALE_READY/FEMALE_HAIR/Crespos/C1.png' }
         ]
       },
       {
@@ -95,10 +95,10 @@ const MAIN_SECTIONS = [
         icon: GiHairStrands,
         // merged with previous "Cabelos Lisos" options (1..3)
         options: [
-          { id: 1, label: '1' },
-          { id: 2, label: '2' },
-          { id: 3, label: '3' },
-          { id: 12, label: '4' }
+          { id: 1, img:'/FEMALE_READY/FEMALE_HAIR/Lisos/C1.png'},
+          { id: 2, img:'/FEMALE_READY/FEMALE_HAIR/Lisos/C2.png'},
+          { id: 3, img:'/FEMALE_READY/FEMALE_HAIR/Lisos/C3.png'},
+          { id: 12, img:'/FEMALE_READY/FEMALE_HAIR/Lisos/C0.png' }
         ]
       },
       {
@@ -106,9 +106,9 @@ const MAIN_SECTIONS = [
         title: 'Ondulado',
         icon: GiHairStrands,
         options: [
-          { id: 14, label: '1' },
-          { id: 15, label: '2' },
-          { id: 16, label: '3' }
+          { id: 14, img:'/FEMALE_READY/FEMALE_HAIR/Ondulados/C0.png' },
+          { id: 15,img:'/FEMALE_READY/FEMALE_HAIR/Ondulados/C1.png'},
+          { id: 16, img:'/FEMALE_READY/FEMALE_HAIR/Ondulados/C2.png' }
         ]
       }
     ]
@@ -837,6 +837,7 @@ function Home({ onDone }) {
                             <button
                               key={option.id}
                               className={`option-button  ${selectedHair === option.id ? 'active' : ''}`}
+                              style={{ backgroundImage: option.img ? `url(${option.img})` : 'none', backgroundSize: 'cover' }}
                               onClick={() => {
                                 if (selectedSection === 'hair') {
                                   setSelectedHair(option.id)
@@ -866,6 +867,7 @@ function Home({ onDone }) {
                               key={option.id}
                               className={`option-button ${selectedFaceOption === option.id ? 'active' : ''}`}
                               onClick={() => setSelectedFaceOption(option.id)}
+                              style={{ backgroundImage: option.img ? `url(${option.img})` : 'none', backgroundSize: 'cover' }}
                             >
                               {option.label}
                             </button>
