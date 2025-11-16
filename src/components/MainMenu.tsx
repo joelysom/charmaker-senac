@@ -20,7 +20,7 @@ import { signOut } from 'firebase/auth';
 
 type MainMenuProps = {
   userData: UserData;
-  onNavigate: (step: GameStep) => void;
+  onNavigate: (step: GameStep, options?: {force ?: boolean}) => void;
 };
 
 type MenuOption = {
@@ -207,7 +207,7 @@ export function MainMenu({ userData, onNavigate }: MainMenuProps) {
       >
         <Card
           className="p-6 cursor-pointer transition-all duration-300 hover:shadow-xl bg-gradient-to-r from-gray-900 to-gray-800 text-amber-400 group"
-          onClick={() => onNavigate('quiz')}
+          onClick={() => onNavigate('quiz', {force:true})}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
