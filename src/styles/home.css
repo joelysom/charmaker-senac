@@ -669,11 +669,11 @@ html,body,#root{
 }
 
 
-@media screen and (max-width:400px) {
+@media screen and (max-width:420px) {
   .preset-arrows{
   position: absolute;
   margin-top: 200px;
-  top: 20%;
+  top: 25%;
   left: 50%;
   transform: translate(-50%, -50%);
   
@@ -683,8 +683,7 @@ html,body,#root{
 @media screen and (max-width:376px) {
   .preset-arrows{
   position: absolute;
-  margin-top: 200px;
-  top: 20%;
+  top: 13%;
   left: 50%;
   transform: translate(-50%, -50%);
   
