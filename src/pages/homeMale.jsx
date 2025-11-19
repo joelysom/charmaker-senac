@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, Suspense } from 'react'
 import SaveButton from '../components/SaveCharacter'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, useGLTF, useTexture } from '@react-three/drei'
+import { OrbitControls, useGLTF, useTexture, Preload } from '@react-three/drei'
 import * as THREE from 'three'
 import { useSpring, animated } from '@react-spring/three'
 import { GiHairStrands, GiLargeDress } from 'react-icons/gi'
@@ -90,6 +90,20 @@ const SKIN_TEXTURE_MAP = {
 }
 
 // ==============================================================
+// 🚀 PRÉ-CARREGAMENTO DE MODELOS CRÍTICOS (PERFORMANCE MOBILE)
+// ==============================================================
+// Mobile: pré-carrega APENAS o essencial para evitar sobrecarga
+const PRELOAD_MODELS = [
+  '/models/male/MBody_0.glb',
+  '/models/male/MFace_0.glb'
+]
+
+// Força o cache apenas em desktop
+if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+  PRELOAD_MODELS.forEach(url => useGLTF.preload(url))
+}
+
+// ==============================================================
 // 🧹 UTILITÁRIOS DE LIMPEZA
 // ==============================================================
 function cleanMaterial(material) {
@@ -100,14 +114,34 @@ function cleanMaterial(material) {
 }
 
 // ==============================================================
-// 💇‍♂️ COMPONENTE DE CABELO INTELIGENTE (MALE)
+// 💇‍♂️ COMPONENTE DE CABELO INTELIGENTE (OTIMIZADO PARA MOBILE)
 // ==============================================================
 const SmartHair = ({ hairId, onLoaded }) => {
   const url = HAIR_MODELS[hairId]
   if (!url) return null
 
-  const { scene } = useGLTF(url, true)
-  const clone = useMemo(() => scene.clone(), [scene])
+  const { scene } = useGLTF(url, true, true)
+  const clone = useMemo(() => {
+    const cloned = scene.clone()
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    if (isMobile) {
+      cloned.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          // Simplifica geometria agressivamente em mobile
+          child.geometry.computeBoundsTree = null
+          child.geometry.computeVertexNormals()
+          // Remove atributos desnecessários
+          if (child.geometry.attributes.uv2) {
+            child.geometry.deleteAttribute('uv2')
+          }
+          if (child.geometry.attributes.tangent) {
+            child.geometry.deleteAttribute('tangent')
+          }
+        }
+      })
+    }
+    return cloned
+  }, [scene])
 
   useEffect(() => {
     return () => {
@@ -121,14 +155,11 @@ const SmartHair = ({ hairId, onLoaded }) => {
     }
   }, [clone])
 
-  // Nenhuma textura externa necessária (todos os cabelos usam textura embutida)
-  const texture = null
-  
   useEffect(() => {
     clone.traverse((child) => {
       if (child.isMesh) {
-        // Cabelo desenhado por último
-        child.renderOrder = 2 
+        child.renderOrder = 2
+        child.frustumCulled = true 
 
         const materials = Array.isArray(child.material) ? child.material : [child.material]
         materials.forEach((mat) => {
@@ -155,8 +186,8 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
   const bodyUrl = BODY_MODELS[bodyType]
   const faceUrl = FACE_MODELS[bodyType]
 
-  const { scene: bodyScene } = useGLTF(bodyUrl)
-  const { scene: faceScene } = useGLTF(faceUrl)
+  const { scene: bodyScene } = useGLTF(bodyUrl, true, true)
+  const { scene: faceScene } = useGLTF(faceUrl, true, true)
 
   const bodyClone = useMemo(() => bodyScene.clone(), [bodyScene])
   const faceClone = useMemo(() => faceScene.clone(), [faceScene])
@@ -200,6 +231,18 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
         if (tex) {
           tex.flipY = false 
           tex.colorSpace = THREE.SRGBColorSpace
+          // Otimização AGRESSIVA mobile: qualidade mínima
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+          if (isMobile) {
+            tex.anisotropy = 1 // Mínimo absoluto
+            tex.generateMipmaps = false // Desabilita mipmaps
+            tex.minFilter = THREE.LinearFilter // Filtro mais leve
+            tex.magFilter = THREE.LinearFilter
+          } else {
+            tex.anisotropy = 4
+            tex.generateMipmaps = true
+            tex.minFilter = THREE.LinearMipmapLinearFilter
+          }
           tex.needsUpdate = true
         }
       } catch (e) { console.warn("⚠️ Aviso textura:", e) }
@@ -228,6 +271,7 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
         if (!node.isMesh) return
         
         node.renderOrder = 1
+        node.frustumCulled = true
 
         node.material.map = faceTexture
         node.material.transparent = true 
@@ -470,6 +514,8 @@ function Home({ onDone }) {
     config: { mass: 1, tension: 170, friction: 26 }
   })
 
+  const isMobile = useMemo(() => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent), [])
+
   useEffect(() => {
     const controls = orbitControlsRef.current
     if (!controls) return
@@ -527,12 +573,23 @@ function Home({ onDone }) {
 
         <Canvas 
             camera={{ position: [0, 0, modelPresets[0].cameraDistance], fov: 75 }}
-            gl={{ preserveDrawingBuffer: true, powerPreference: "high-performance", antialias: true }}
+            gl={{ 
+              preserveDrawingBuffer: true, 
+              powerPreference: isMobile ? "low-power" : "high-performance",
+              antialias: !isMobile,
+              alpha: true,
+              stencil: false,
+              depth: true,
+              logarithmicDepthBuffer: false,
+              failIfMajorPerformanceCaveat: false
+            }}
+            dpr={isMobile ? 1 : [1, 2]} // Mobile: DPR fixo em 1
+            performance={{ min: 0.5 }}
         >
-          <ambientLight intensity={1.2} />
-          <directionalLight position={[5, 5, 5]} intensity={1} />
-          <pointLight position={[10, 10, 10]} intensity={0.8} />
-          <pointLight position={[-10, -10, -10]} intensity={0.5} />
+          <ambientLight intensity={isMobile ? 1.5 : 1.2} />
+          {!isMobile && <directionalLight position={[5, 5, 5]} intensity={1} />}
+          {!isMobile && <pointLight position={[10, 10, 10]} intensity={0.8} />}
+          {!isMobile && <pointLight position={[-10, -10, -10]} intensity={0.5} />}
 
           <animated.group
             ref={groupRef}
@@ -565,7 +622,10 @@ function Home({ onDone }) {
             enableRotate={false}
             minDistance={0.000001}
             maxDistance={1e12}
+            enableDamping={false}
           />
+          
+          {!isMobile && <Preload all={false} />}
         </Canvas>
 
         <div className="overlay-bottom">

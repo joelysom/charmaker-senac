@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback, Suspense } from 'react'
 import SaveButton from '../components/SaveCharacter'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, useGLTF, useTexture } from '@react-three/drei'
+import { OrbitControls, useGLTF, useTexture, Preload } from '@react-three/drei'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { useSpring, animated } from '@react-spring/three'
 import { GiHairStrands, GiLargeDress } from 'react-icons/gi'
 import { IoMdClose } from 'react-icons/io'
@@ -91,6 +92,20 @@ const SKIN_TEXTURE_MAP = {
 }
 
 // ==============================================================
+// 🚀 PRÉ-CARREGAMENTO DE MODELOS CRÍTICOS (PERFORMANCE MOBILE)
+// ==============================================================
+// Mobile: pré-carrega APENAS o essencial para evitar sobrecarga
+const PRELOAD_MODELS = [
+  '/models/female/GBody_0.glb',
+  '/models/female/GFace_0.glb'
+]
+
+// Força o cache apenas em desktop
+if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+  PRELOAD_MODELS.forEach(url => useGLTF.preload(url))
+}
+
+// ==============================================================
 // 🧹 UTILITÁRIOS DE LIMPEZA
 // ==============================================================
 function cleanMaterial(material) {
@@ -101,14 +116,137 @@ function cleanMaterial(material) {
 }
 
 // ==============================================================
-// 💇‍♀️ COMPONENTE DE CABELO INTELIGENTE (OTIMIZADO SEM TEXTURAS EXTERNAS)
+// 🔧 COMPONENTE ESPECIAL PARA CULTURAL_4 (PROBLEMA DE CRASH)
+// ==============================================================
+const Cultural4Hair = ({ onLoaded }) => {
+  const [hairModel, setHairModel] = useState(null)
+  const [loadError, setLoadError] = useState(false)
+  const loadedRef = useRef(false)
+  
+  useEffect(() => {
+    if (loadedRef.current) return // Evita recarregamento
+    
+    let mounted = true
+    const loader = new GLTFLoader()
+    
+    loader.load(
+      '/models/female/Hair(FEMALE)/Cultural/Cultural_4.glb',
+      (gltf) => {
+        if (!mounted) return
+        try {
+          const cloned = gltf.scene.clone()
+          
+          cloned.traverse((child) => {
+            if (child.isMesh) {
+              child.renderOrder = 2
+              child.frustumCulled = true
+              child.castShadow = false
+              child.receiveShadow = false
+              
+              if (child.geometry && child.geometry.attributes.position) {
+                const vertexCount = child.geometry.attributes.position.count
+                if (vertexCount > 3000) {
+                  child.geometry.computeVertexNormals()
+                }
+              }
+              
+              const materials = Array.isArray(child.material) ? child.material : [child.material]
+              materials.forEach((mat) => {
+                mat.transparent = true
+                mat.alphaTest = 0.85
+                mat.depthWrite = true
+                mat.depthTest = true
+                mat.side = THREE.FrontSide
+                mat.needsUpdate = true
+                mat.envMap = null
+                mat.lightMap = null
+              })
+            }
+          })
+          
+          setHairModel(cloned)
+          loadedRef.current = true
+          if (onLoaded) {
+            setTimeout(() => onLoaded(), 100)
+          }
+        } catch (err) {
+          console.error('❌ Erro ao processar Cultural_4:', err)
+          setLoadError(true)
+          loadedRef.current = true
+        }
+      },
+      undefined,
+      (error) => {
+        console.error('❌ Erro ao carregar Cultural_4:', error)
+        if (mounted) {
+          setLoadError(true)
+          loadedRef.current = true
+        }
+      }
+    )
+    
+    return () => {
+      mounted = false
+    }
+  }, []) // Sem dependências - carrega apenas uma vez
+
+  useEffect(() => {
+    return () => {
+      if (hairModel) {
+        hairModel.traverse((obj) => {
+          if (obj.isMesh) {
+            obj.geometry?.dispose()
+            if (Array.isArray(obj.material)) obj.material.forEach(cleanMaterial)
+            else if (obj.material) cleanMaterial(obj.material)
+          }
+        })
+      }
+    }
+  }, [hairModel])
+  
+  if (loadError) {
+    return <SmartHair hairId={7} onLoaded={onLoaded} />
+  }
+  
+  if (!hairModel) return null
+  
+  return <primitive object={hairModel} dispose={null} />
+}
+
+// ==============================================================
+// 💇‍♀️ COMPONENTE DE CABELO INTELIGENTE (OTIMIZADO PARA MOBILE)
 // ==============================================================
 const SmartHair = ({ hairId, onLoaded }) => {
+  // 🚨 TRATAMENTO ESPECIAL PARA CULTURAL_4
+  if (hairId === 13) {
+    return <Cultural4Hair onLoaded={onLoaded} />
+  }
+  
   const url = HAIR_MODELS[hairId]
   if (!url) return null
 
-  const { scene } = useGLTF(url, true)
-  const clone = useMemo(() => scene.clone(), [scene])
+  const { scene } = useGLTF(url, true, true)
+  const clone = useMemo(() => {
+    const cloned = scene.clone()
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    if (isMobile) {
+      cloned.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          // Simplifica geometria agressivamente em mobile
+          child.geometry.computeBoundsTree = null
+          child.geometry.computeVertexNormals()
+          // Remove atributos desnecessários
+          if (child.geometry.attributes.uv2) {
+            child.geometry.deleteAttribute('uv2')
+          }
+          if (child.geometry.attributes.tangent) {
+            child.geometry.deleteAttribute('tangent')
+          }
+        }
+      })
+    }
+    return cloned
+  }, [scene])
 
   useEffect(() => {
     return () => {
@@ -122,14 +260,11 @@ const SmartHair = ({ hairId, onLoaded }) => {
     }
   }, [clone])
 
-  // Nenhuma textura externa necessária (todos os cabelos usam textura embutida)
-  const texture = null
-  
   useEffect(() => {
     clone.traverse((child) => {
       if (child.isMesh) {
-        // Cabelo desenhado por último
         child.renderOrder = 2 
+        child.frustumCulled = true
 
         const materials = Array.isArray(child.material) ? child.material : [child.material]
         materials.forEach((mat) => {
@@ -143,7 +278,6 @@ const SmartHair = ({ hairId, onLoaded }) => {
       }
     })
     
-    // Notifica que o modelo está pronto após configuração
     if (onLoaded) {
       setTimeout(() => onLoaded(), 100)
     }
@@ -152,22 +286,18 @@ const SmartHair = ({ hairId, onLoaded }) => {
   return <primitive object={clone} dispose={null} />
 }
 // ==============================================================
-// 🧍‍♀️ COMPONENTE DE CORPO INTELIGENTE (CAMADAS 0 e 1)
+// 🧍‍♀️ COMPONENTE DE CORPO INTELIGENTE (OTIMIZADO PARA MOBILE)
 // ==============================================================
 const SmartBody = ({ bodyType, skinColor, faceOption }) => {
-  // DEBUG DE ENTRADA
-  // console.log(`[SmartBody] Props: ${bodyType}, ${skinColor}, ${faceOption}`)
-
   const bodyUrl = BODY_MODELS[bodyType]
   const faceUrl = FACE_MODELS[bodyType]
 
-  const { scene: bodyScene } = useGLTF(bodyUrl)
-  const { scene: faceScene } = useGLTF(faceUrl)
+  const { scene: bodyScene } = useGLTF(bodyUrl, true, true)
+  const { scene: faceScene } = useGLTF(faceUrl, true, true)
 
   const bodyClone = useMemo(() => bodyScene.clone(), [bodyScene])
   const faceClone = useMemo(() => faceScene.clone(), [faceScene])
 
-  // Cleanup
   useEffect(() => {
     return () => {
         [bodyClone, faceClone].forEach(scene => {
@@ -182,7 +312,6 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
     }
   }, [bodyClone, faceClone])
 
-  // Mapeamento de texturas
   const skinTypeToTextureId = { 'PRETO': '_0', 'AMARELO': '_1', 'BRANCO': '_2', 'PARDO': '_3', 'INDIGENA': '_4' }
   const skinIdToFolderName = { skin1: 'PRETO', skin2: 'PARDO', skin3: 'INDIGENA', skin4: 'AMARELO', skin5: 'BRANCO' }
   const faceTypeToTextureName = { face1: 'PRETO', face2: 'PARDO', face3: 'INDIGENA', face4: 'AMARELO', face5: 'BRANCO' }
@@ -198,7 +327,6 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
   const bodyTexUrl = SKIN_TEXTURE_MAP[skinColor] || SKIN_TEXTURE_MAP.skin1
   const faceTexUrl = getFaceTexturePath()
   
-  // Carregamento
   const bodyTexture = useTexture(bodyTexUrl)
   const faceTexture = useTexture(faceTexUrl)
 
@@ -208,6 +336,18 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
         if (tex) {
           tex.flipY = false 
           tex.colorSpace = THREE.SRGBColorSpace
+          // Otimização AGRESSIVA mobile: qualidade mínima
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+          if (isMobile) {
+            tex.anisotropy = 1 // Mínimo absoluto
+            tex.generateMipmaps = false // Desabilita mipmaps
+            tex.minFilter = THREE.LinearFilter // Filtro mais leve
+            tex.magFilter = THREE.LinearFilter
+          } else {
+            tex.anisotropy = 4
+            tex.generateMipmaps = true
+            tex.minFilter = THREE.LinearMipmapLinearFilter
+          }
           tex.needsUpdate = true
         }
       } catch (e) { console.warn("⚠️ Aviso textura:", e) }
@@ -216,33 +356,28 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
     configureTexture(bodyTexture)
     configureTexture(faceTexture)
 
-    // ========================================================
-    // 1. CAMADA 0: CORPO E ROUPAS (BASE)
-    // ========================================================
     if (bodyTexture) {
       bodyClone.traverse((node) => {
         if (!node.isMesh) return
         
-        // 🔥 RenderOrder 0: Desenhado primeiro
         node.renderOrder = 0 
+        node.frustumCulled = true
 
         node.material.map = bodyTexture
-        node.material.transparent = false // Corpo é sólido
-        node.material.depthWrite = true   // Corpo escreve profundidade
+        node.material.transparent = false
+        node.material.depthWrite = true
         node.material.depthTest = true
         node.material.side = THREE.FrontSide
         node.material.needsUpdate = true
       })
     }
 
-    // ========================================================
-    // 2. CAMADA 1: ROSTO (ADESIVO SOBRE O CORPO)
-    // ========================================================
     if (faceTexture) {
       faceClone.traverse((node) => {
         if (!node.isMesh) return
         
         node.renderOrder = 1
+        node.frustumCulled = true
 
         node.material.map = faceTexture
         node.material.transparent = true 
@@ -403,6 +538,9 @@ function Home({ onDone }) {
     config: { mass: 1, tension: 170, friction: 26 }
   })
 
+  // Detecta mobile para ajustar qualidade do Canvas
+  const isMobile = useMemo(() => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent), [])
+
   useEffect(() => {
     const controls = orbitControlsRef.current
     if (!controls) return
@@ -460,12 +598,23 @@ function Home({ onDone }) {
 
         <Canvas 
             camera={{ position: [0, 0, modelPresets[0].cameraDistance], fov: 75 }}
-            gl={{ preserveDrawingBuffer: true, powerPreference: "high-performance", antialias: true }}
+            gl={{ 
+              preserveDrawingBuffer: true, 
+              powerPreference: isMobile ? "low-power" : "high-performance",
+              antialias: !isMobile,
+              alpha: true,
+              stencil: false,
+              depth: true,
+              logarithmicDepthBuffer: false,
+              failIfMajorPerformanceCaveat: false
+            }}
+            dpr={isMobile ? 1 : [1, 2]} // Mobile: DPR fixo em 1
+            performance={{ min: 0.5 }}
         >
-          <ambientLight intensity={1.2} />
-          <directionalLight position={[5, 5, 5]} intensity={1} />
-          <pointLight position={[10, 10, 10]} intensity={0.8} />
-          <pointLight position={[-10, -10, -10]} intensity={0.5} />
+          <ambientLight intensity={isMobile ? 1.5 : 1.2} />
+          {!isMobile && <directionalLight position={[5, 5, 5]} intensity={1} />}
+          {!isMobile && <pointLight position={[10, 10, 10]} intensity={0.8} />}
+          {!isMobile && <pointLight position={[-10, -10, -10]} intensity={0.5} />}
 
           <animated.group
             ref={groupRef}
@@ -498,7 +647,10 @@ function Home({ onDone }) {
             enableRotate={false}
             minDistance={0.000001}
             maxDistance={1e12}
+            enableDamping={false}
           />
+          
+          {!isMobile && <Preload all={false} />}
         </Canvas>
 
         <div className="overlay-bottom">
