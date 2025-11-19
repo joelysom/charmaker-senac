@@ -382,6 +382,7 @@ html,body,#root{
   transform:translateX(-50%);
   background:#09224f;
   padding: 12px;
+  min-height: 150px;
   border-radius:12px;
   box-shadow:0 8px 30px rgba(16,24,40,0.08);
   z-index:10;
