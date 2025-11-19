@@ -22,7 +22,7 @@ class ErrorBoundary extends React.Component {
     return { hasError: true }
   }
   componentDidCatch(error, errorInfo) {
-    console.error("🚨 Erro capturado no 3D (Male):", error)
+    console.error("Erro capturado no 3D (Male):", error)
   }
   componentDidUpdate(prevProps) {
     if (this.props.resetKey !== prevProps.resetKey) {
@@ -34,7 +34,6 @@ class ErrorBoundary extends React.Component {
     return this.props.children
   }
 }
-
 
 // ==============================================================
 // 📂 MAPEAMENTO DE ARQUIVOS (MALE)
@@ -90,18 +89,22 @@ const SKIN_TEXTURE_MAP = {
 }
 
 // ==============================================================
-// 🚀 PRÉ-CARREGAMENTO DE MODELOS CRÍTICOS (PERFORMANCE MOBILE)
+// 🚀 PRÉ-CARREGAMENTO (PERFORMANCE)
 // ==============================================================
-// Mobile: pré-carrega APENAS o essencial para evitar sobrecarga
+
+// 1. Pré-carrega geometria essencial
 const PRELOAD_MODELS = [
   '/models/male/MBody_0.glb',
   '/models/male/MFace_0.glb'
 ]
 
-// Força o cache apenas em desktop
 if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
   PRELOAD_MODELS.forEach(url => useGLTF.preload(url))
 }
+
+// 2. Pré-carrega pele
+Object.values(SKIN_TEXTURE_MAP).forEach(url => useTexture.preload(url))
+
 
 // ==============================================================
 // 🧹 UTILITÁRIOS DE LIMPEZA
@@ -114,40 +117,41 @@ function cleanMaterial(material) {
 }
 
 // ==============================================================
-// 💇‍♂️ COMPONENTE DE CABELO INTELIGENTE (OTIMIZADO PARA MOBILE)
+// 💇‍♂️ COMPONENTE DE CABELO INTELIGENTE
 // ==============================================================
 const SmartHair = ({ hairId, onLoaded }) => {
   const url = HAIR_MODELS[hairId]
   if (!url) return null
 
   const { scene } = useGLTF(url, true, true)
+  
   const clone = useMemo(() => {
     const cloned = scene.clone()
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-    if (isMobile) {
-      cloned.traverse((child) => {
-        if (child.isMesh && child.geometry) {
-          // Simplifica geometria agressivamente em mobile
+    
+    cloned.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        // Otimizações Mobile
+        if (isMobile) {
           child.geometry.computeBoundsTree = null
           child.geometry.computeVertexNormals()
-          // Remove atributos desnecessários
-          if (child.geometry.attributes.uv2) {
-            child.geometry.deleteAttribute('uv2')
-          }
-          if (child.geometry.attributes.tangent) {
-            child.geometry.deleteAttribute('tangent')
-          }
+          if (child.geometry.attributes.uv2) child.geometry.deleteAttribute('uv2')
+          if (child.geometry.attributes.tangent) child.geometry.deleteAttribute('tangent')
         }
-      })
-    }
+        // Otimizações Gerais
+        child.renderOrder = 2
+        child.frustumCulled = true
+      }
+    })
     return cloned
   }, [scene])
 
+  // Correção de memória
   useEffect(() => {
     return () => {
       clone.traverse((obj) => {
         if (obj.isMesh) {
-          obj.geometry.dispose()
+          // Apenas limpar materiais clonados
           if (Array.isArray(obj.material)) obj.material.forEach(cleanMaterial)
           else cleanMaterial(obj.material)
         }
@@ -158,9 +162,6 @@ const SmartHair = ({ hairId, onLoaded }) => {
   useEffect(() => {
     clone.traverse((child) => {
       if (child.isMesh) {
-        child.renderOrder = 2
-        child.frustumCulled = true 
-
         const materials = Array.isArray(child.material) ? child.material : [child.material]
         materials.forEach((mat) => {
           mat.transparent = true
@@ -173,7 +174,6 @@ const SmartHair = ({ hairId, onLoaded }) => {
       }
     })
     
-    // Notifica que o modelo está pronto após configuração
     if (onLoaded) {
       setTimeout(() => onLoaded(), 100)
     }
@@ -182,6 +182,9 @@ const SmartHair = ({ hairId, onLoaded }) => {
   return <primitive object={clone} dispose={null} />
 }
 
+// ==============================================================
+// 🧍‍♂️ COMPONENTE DE CORPO INTELIGENTE
+// ==============================================================
 const SmartBody = ({ bodyType, skinColor, faceOption }) => {
   const bodyUrl = BODY_MODELS[bodyType]
   const faceUrl = FACE_MODELS[bodyType]
@@ -192,12 +195,13 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
   const bodyClone = useMemo(() => bodyScene.clone(), [bodyScene])
   const faceClone = useMemo(() => faceScene.clone(), [faceScene])
 
+  // 🚨 CORREÇÃO CRÍTICA DE MEMÓRIA
   useEffect(() => {
     return () => {
         [bodyClone, faceClone].forEach(scene => {
             scene.traverse(o => {
                 if(o.isMesh) {
-                    o.geometry.dispose()
+                    // NÃO descartar geometria aqui
                     if (Array.isArray(o.material)) o.material.forEach(cleanMaterial)
                     else cleanMaterial(o.material)
                 }
@@ -206,7 +210,7 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
     }
   }, [bodyClone, faceClone])
 
-  // Mapeamento
+  // Mapeamento de Texturas
   const skinTypeToTextureId = { 'PRETO': '_0', 'AMARELO': '_1', 'BRANCO': '_2', 'PARDO': '_3', 'INDIGENA': '_4' }
   const skinIdToFolderName = { skin1: 'PRETO', skin2: 'PARDO', skin3: 'INDIGENA', skin4: 'AMARELO', skin5: 'BRANCO' }
   const faceTypeToTextureName = { face1: 'PRETO', face2: 'PARDO', face3: 'INDIGENA', face4: 'AMARELO', face5: 'BRANCO' }
@@ -231,12 +235,12 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
         if (tex) {
           tex.flipY = false 
           tex.colorSpace = THREE.SRGBColorSpace
-          // Otimização AGRESSIVA mobile: qualidade mínima
+          // Otimização Mobile
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
           if (isMobile) {
-            tex.anisotropy = 1 // Mínimo absoluto
-            tex.generateMipmaps = false // Desabilita mipmaps
-            tex.minFilter = THREE.LinearFilter // Filtro mais leve
+            tex.anisotropy = 1 
+            tex.generateMipmaps = false 
+            tex.minFilter = THREE.LinearFilter 
             tex.magFilter = THREE.LinearFilter
           } else {
             tex.anisotropy = 4
@@ -256,7 +260,6 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
         if (!node.isMesh) return
         
         node.renderOrder = 0 
-
         node.material.map = bodyTexture
         node.material.transparent = false 
         node.material.depthWrite = true   
@@ -276,14 +279,10 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
         node.material.map = faceTexture
         node.material.transparent = true 
         node.material.alphaTest = 0.5 
-        
-        // Isso faz o rosto bloquear a visão do cabelo que está atrás dele
         node.material.depthWrite = true 
         node.material.depthTest = true
         node.material.side = THREE.FrontSide 
-      
-        // Puxa o rosto para frente para não brigar com o corpo, 
-        // já que ligamos o depthWrite
+        // Offset para evitar Z-Fighting com o corpo
         node.material.polygonOffset = true
         node.material.polygonOffsetFactor = -1 
         node.material.polygonOffsetUnits = -4
@@ -437,10 +436,9 @@ function Home({ onDone }) {
   const loadingTimerRef = useRef(null)
   const hairLoadedRef = useRef(false)
 
-  // Callback memoizado para evitar loops
+  // Callback memoizado
   const handleHairLoaded = useCallback(() => {
     hairLoadedRef.current = true
-    // Se já passou o tempo mínimo, pode fechar
     if (!loadingTimerRef.current) {
       setIsLoadingHair(false)
     }
@@ -491,10 +489,8 @@ function Home({ onDone }) {
       hairLoadedRef.current = false
       loadingTimerRef.current = true
       
-      // Tempo MÍNIMO de exibição do loading (1500ms)
       const timer = setTimeout(() => {
         loadingTimerRef.current = null
-        // Só fecha se o modelo já carregou
         if (hairLoadedRef.current) {
           setIsLoadingHair(false)
         }
@@ -583,7 +579,7 @@ function Home({ onDone }) {
               logarithmicDepthBuffer: false,
               failIfMajorPerformanceCaveat: false
             }}
-            dpr={isMobile ? 1 : [1, 2]} // Mobile: DPR fixo em 1
+            dpr={isMobile ? 1 : [1, 2]}
             performance={{ min: 0.5 }}
         >
           <ambientLight intensity={isMobile ? 1.5 : 1.2} />

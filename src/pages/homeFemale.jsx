@@ -99,6 +99,8 @@ const PRELOAD_MODELS = [
   '/models/female/GBody_0.glb',
   '/models/female/GFace_0.glb'
 ]
+//Para evitar piscada na troca de pele.
+Object.values(SKIN_TEXTURE_MAP).forEach(url => useTexture.preload(url))
 
 // Força o cache apenas em desktop
 if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
@@ -217,42 +219,50 @@ const Cultural4Hair = ({ onLoaded }) => {
 // 💇‍♀️ COMPONENTE DE CABELO INTELIGENTE (OTIMIZADO PARA MOBILE)
 // ==============================================================
 const SmartHair = ({ hairId, onLoaded }) => {
-  // 🚨 TRATAMENTO ESPECIAL PARA CULTURAL_4
-  if (hairId === 13) {
-    return <Cultural4Hair onLoaded={onLoaded} />
-  }
-  
   const url = HAIR_MODELS[hairId]
   if (!url) return null
 
-  const { scene } = useGLTF(url, true, true)
+  // Carrega o GLTF
+  const { scene } = useGLTF(url, true)
+
+  // 1. CLONAGEM INTELIGENTE
   const clone = useMemo(() => {
     const cloned = scene.clone()
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-    if (isMobile) {
-      cloned.traverse((child) => {
-        if (child.isMesh && child.geometry) {
-          // Simplifica geometria agressivamente em mobile
-          child.geometry.computeBoundsTree = null
-          child.geometry.computeVertexNormals()
-          // Remove atributos desnecessários
-          if (child.geometry.attributes.uv2) {
-            child.geometry.deleteAttribute('uv2')
-          }
-          if (child.geometry.attributes.tangent) {
-            child.geometry.deleteAttribute('tangent')
-          }
-        }
-      })
-    }
-    return cloned
-  }, [scene])
 
+    cloned.traverse((child) => {
+      if (child.isMesh) {
+        // Otimizações Gerais
+        child.renderOrder = 2
+        child.frustumCulled = true
+        
+        // 🚨 LÓGICA ESPECÍFICA DO CULTURAL_4 (ID 13) INTEGRADA
+        if (hairId === 13) {
+           child.castShadow = false
+           child.receiveShadow = false
+           // Correção de normais para o Cultural 4 se necessário
+           if (child.geometry && child.geometry.attributes.position.count > 3000) {
+             child.geometry.computeVertexNormals()
+           }
+        }
+
+        // Otimizações Mobile (Strip attributes)
+        if (isMobile && child.geometry) {
+           child.geometry.computeBoundsTree = null
+           // Remove dados que pesam na GPU e não são usados em shaders simples
+           if (child.geometry.attributes.uv2) child.geometry.deleteAttribute('uv2')
+           if (child.geometry.attributes.tangent) child.geometry.deleteAttribute('tangent')
+        }
+      }
+    })
+    return cloned
+  }, [scene, hairId])
+
+  // 2. LIMPEZA SEGURA (CORREÇÃO DO BUG DE MEMÓRIA)
   useEffect(() => {
     return () => {
       clone.traverse((obj) => {
         if (obj.isMesh) {
-          obj.geometry.dispose()
           if (Array.isArray(obj.material)) obj.material.forEach(cleanMaterial)
           else cleanMaterial(obj.material)
         }
@@ -260,28 +270,41 @@ const SmartHair = ({ hairId, onLoaded }) => {
     }
   }, [clone])
 
-  useEffect(() => {
+  // 3. APLICAÇÃO DE MATERIAIS
+  useMemo(() => { 
     clone.traverse((child) => {
       if (child.isMesh) {
-        child.renderOrder = 2 
-        child.frustumCulled = true
-
         const materials = Array.isArray(child.material) ? child.material : [child.material]
+        
         materials.forEach((mat) => {
           mat.transparent = true
-          mat.alphaTest = 0.9
           mat.depthWrite = true 
           mat.depthTest = true
-          mat.side = THREE.DoubleSide
+          
+          // Configurações específicas por ID
+          if (hairId === 13) {
+             mat.alphaTest = 0.85
+             mat.side = THREE.FrontSide
+             mat.envMap = null // Remove reflexos pesados no Cultural 4
+          } else {
+             mat.alphaTest = 0.9
+             mat.side = THREE.DoubleSide
+          }
+          
           mat.needsUpdate = true
         })
       }
     })
-    
+  }, [clone, hairId])
+
+  // Notifica carregamento concluído
+  useEffect(() => {
     if (onLoaded) {
-      setTimeout(() => onLoaded(), 100)
+      // Pequeno delay para garantir que a GPU compilou o shader
+      const timer = setTimeout(() => onLoaded(), 50)
+      return () => clearTimeout(timer)
     }
-  }, [clone, onLoaded])
+  }, [onLoaded, hairId])
 
   return <primitive object={clone} dispose={null} />
 }
@@ -303,7 +326,7 @@ const SmartBody = ({ bodyType, skinColor, faceOption }) => {
         [bodyClone, faceClone].forEach(scene => {
             scene.traverse(o => {
                 if(o.isMesh) {
-                    o.geometry.dispose()
+                    
                     if (Array.isArray(o.material)) o.material.forEach(cleanMaterial)
                     else cleanMaterial(o.material)
                 }
