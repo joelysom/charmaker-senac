@@ -20,6 +20,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomeFemale from './pages/homeFemale';
 import HomeMale from './pages/homeMale';
 import AdminPage from './pages/admin';
+import Landpage from './pages/landpage';
 
 export type UserData = {
   name: string;
@@ -253,7 +254,8 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={appMain} />
+        <Route path="/" element={<Landpage />} />
+        <Route path="/app" element={appMain} />
         <Route
           path="/home-female"
           element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quizPhaseOne'); navigateTo('quizPhaseOne'); } })}

@@ -1,0 +1,432 @@
+/* CSS MODERNO E OTIMIZADO */
+
+/* ===== RESET ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+:root {
+  --black: #000;
+  --gray: #dcdcdc;
+  --blue: #007edb;
+  --blue-dark: #0056a1;
+  --yellow: #f8b400;
+  --green: #1fa447;
+  --red: #e7323e;
+  --text-dark: #1a1a1a;
+  --text-light: #666;
+  --bg-light: #f9f9f9;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.landpage-wrapper {
+  width: 100%;
+  overflow-x: hidden;
+  background: #fff;
+}
+
+.sobre-container {
+  width: 100%;
+  overflow-x: hidden;
+  padding-top: 70px;
+}
+
+/* ================= HERO ================= */
+.hero {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
+}
+
+.hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.75) contrast(1.1);
+  animation: zoomIn 0.8s ease-out;
+}
+
+@keyframes zoomIn {
+  from {
+    transform: scale(1.05);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.hero-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #fff;
+  z-index: 10;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-text h1 {
+  font-size: 72px;
+  font-weight: 800;
+  margin-bottom: 15px;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  letter-spacing: -1px;
+}
+
+.hero-text p {
+  font-size: 28px;
+  font-weight: 300;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  letter-spacing: 1px;
+}
+
+/* ============ UNIVERSIDADES → MUNDO ================= */
+.universidades {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100px 5%;
+  gap: 80px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.universidades-img img {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.universidades-img img:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 50px rgba(0, 126, 219, 0.2);
+}
+
+.universidades-text {
+  flex: 1;
+  min-width: 300px;
+}
+
+.universidades-text h2 {
+  font-size: 42px;
+  font-weight: 800;
+  margin-bottom: 25px;
+  color: var(--text-dark);
+  line-height: 1.2;
+}
+
+.universidades-text p {
+  margin-bottom: 20px;
+  line-height: 1.8;
+  color: var(--text-light);
+  font-size: 16px;
+}
+
+/* ================= PROPÓSITO / MISSÃO ================= */
+.proposito-missao {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 100px 5%;
+  gap: 50px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, rgba(248, 180, 0, 0.05) 0%, rgba(0, 126, 219, 0.05) 100%);
+  border-radius: 20px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.box {
+  text-align: center;
+  padding: 40px;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s ease;
+}
+
+.box:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+}
+
+.box h3 {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 25px;
+  color: var(--text-dark);
+}
+
+.box img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.box p {
+  line-height: 1.8;
+  color: var(--text-light);
+  font-size: 15px;
+}
+
+/* ================= VALORES ================= */
+.valores {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 5%;
+  gap: 80px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.valores-img img {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  transition: transform 0.4s ease;
+}
+
+.valores-img img:hover {
+  transform: scale(1.03);
+}
+
+.valores-text {
+  flex: 1;
+  min-width: 300px;
+}
+
+.valores-text h3 {
+  font-size: 42px;
+  font-weight: 800;
+  margin-bottom: 25px;
+  color: var(--text-dark);
+  line-height: 1.2;
+}
+
+.valores-text p {
+  line-height: 1.8;
+  color: var(--text-light);
+  font-size: 16px;
+}
+
+/* ================= EQUIPE ================= */
+.equipe {
+  padding: 100px 5%;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(31, 164, 71, 0.05) 0%, rgba(248, 180, 0, 0.05) 100%);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.equipe h2 {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 70px;
+  color: var(--text-dark);
+}
+
+.equipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 60px;
+  justify-items: center;
+}
+
+.equipe-card {
+  width: 300px;
+  height: 300px;
+  background: white;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s ease;
+}
+
+.equipe-card:hover {
+  transform: translateY(-15px);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+}
+
+.equipe-foto {
+  width: 160px;
+  height: 160px;
+  background: linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Cores abaixo dos quadrados */
+.equipe-cor {
+  position: absolute;
+  bottom: -50px;
+  width: 180px;
+  height: 70px;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Garantir a alternância das cores nas 4 posições */
+.equipe-card:nth-child(1) .equipe-cor {
+  background: var(--blue);
+}
+
+.equipe-card:nth-child(2) .equipe-cor {
+  background: var(--yellow);
+}
+
+.equipe-card:nth-child(3) .equipe-cor {
+  background: var(--green);
+}
+
+.equipe-card:nth-child(4) .equipe-cor {
+  background: var(--red);
+}
+
+/* ============ RESPONSIVIDADE ============ */
+@media (max-width: 1200px) {
+  .universidades,
+  .valores {
+    flex-direction: column;
+    padding: 80px 5%;
+    gap: 60px;
+  }
+
+  .proposito-missao {
+    padding: 80px 5%;
+  }
+}
+
+@media (max-width: 768px) {
+  .sobre-container {
+    padding-top: 60px;
+  }
+
+  .hero {
+    height: 400px;
+  }
+
+  .hero-text h1 {
+    font-size: 48px;
+  }
+
+  .hero-text p {
+    font-size: 20px;
+  }
+
+  .universidades-text h2,
+  .valores-text h3 {
+    font-size: 32px;
+  }
+
+  .universidades-text p,
+  .valores-text p {
+    font-size: 15px;
+  }
+
+  .proposito-missao {
+    grid-template-columns: 1fr;
+    padding: 60px 5%;
+    gap: 30px;
+  }
+
+  .box {
+    padding: 30px;
+  }
+
+  .box h3 {
+    font-size: 24px;
+  }
+
+  .equipe {
+    padding: 60px 5%;
+  }
+
+  .equipe h2 {
+    font-size: 36px;
+    margin-bottom: 50px;
+  }
+
+  .equipe-grid {
+    gap: 40px;
+  }
+
+  .equipe-card {
+    width: 250px;
+    height: 250px;
+  }
+
+  .equipe-foto {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sobre-container {
+    padding-top: 50px;
+  }
+
+  .hero {
+    height: 300px;
+  }
+
+  .hero-text h1 {
+    font-size: 36px;
+  }
+
+  .hero-text p {
+    font-size: 16px;
+  }
+
+  .universidades-text h2,
+  .valores-text h3,
+  .equipe h2 {
+    font-size: 24px;
+  }
+
+  .equipe-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .equipe-card {
+    width: 100%;
+    max-width: 280px;
+  }
+}
