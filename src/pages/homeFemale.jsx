@@ -63,7 +63,6 @@ const HAIR_MODELS = {
   5: '/models/female/Hair(FEMALE)/Cultural/Cultural_1.glb',
   6: '/models/female/Hair(FEMALE)/Cultural/Cultural_2.glb',
   7: '/models/female/Hair(FEMALE)/Cultural/Cultural_3.glb',
-  13: '/models/female/Hair(FEMALE)/Cultural/Cultural_4.glb',
 
   // Cacheado
   8: '/models/female/Hair(FEMALE)/Cacheado/Cacheado_0.glb',
@@ -101,13 +100,10 @@ function cleanMaterial(material) {
 }
 
 // ==============================================================
-// 💇‍♀️ COMPONENTE DE CABELO INTELIGENTE (ATUALIZADO PARA CORTAR MELHOR)
+// 💇‍♀️ COMPONENTE DE CABELO INTELIGENTE (OTIMIZADO SEM TEXTURAS EXTERNAS)
 // ==============================================================
 const SmartHair = ({ hairId, onLoaded }) => {
   const url = HAIR_MODELS[hairId]
-  
-  // console.log(`[SmartHair] 💇‍♀️ Carregando Cabelo ID: ${hairId}, URL: ${url}`)
-
   if (!url) return null
 
   const { scene } = useGLTF(url, true)
@@ -125,9 +121,13 @@ const SmartHair = ({ hairId, onLoaded }) => {
     }
   }, [clone])
 
+  // Nenhuma textura externa necessária (todos os cabelos usam textura embutida)
+  const texture = null
+  
   useEffect(() => {
     clone.traverse((child) => {
       if (child.isMesh) {
+        // Cabelo desenhado por último
         child.renderOrder = 2 
 
         const materials = Array.isArray(child.material) ? child.material : [child.material]
@@ -142,9 +142,8 @@ const SmartHair = ({ hairId, onLoaded }) => {
       }
     })
     
-    // Notifica que o modelo está pronto após configuração (SEMPRE notifica a cada mudança de clone)
+    // Notifica que o modelo está pronto após configuração
     if (onLoaded) {
-      // Pequeno delay para garantir que o Three.js renderizou
       setTimeout(() => onLoaded(), 100)
     }
   }, [clone, onLoaded])
@@ -285,7 +284,7 @@ const MAIN_SECTIONS = [
   {
     id: 'hair', title: 'Cabelo', icon: GiHairStrands,
     subSections: [
-      { id: 'cultural', title: 'Cabelos Culturais', icon: GiLargeDress, options: [{ id: 4,img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C0.png' }, { id: 5,img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C1.png'}, { id: 6,img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C2.png'}, { id: 7, img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C3.png' }, { id: 13, img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C4.png' }] },
+      { id: 'cultural', title: 'Cabelos Culturais', icon: GiLargeDress, options: [{ id: 4,img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C0.png' }, { id: 5,img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C1.png'}, { id: 6,img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C2.png'}, { id: 7, img:'/FEMALE_READY/FEMALE_HAIR/Culturais/C3.png' }] },
       { id: 'cacheado', title: 'Cacheado', icon: GiHairStrands, options: [{ id: 8, img:'/FEMALE_READY/FEMALE_HAIR/Cacheados/C0.png' }, { id: 9, img:'/FEMALE_READY/FEMALE_HAIR/Cacheados/C1.png' }] },
       { id: 'crespo', title: 'Crespo', icon: GiHairStrands, options: [{ id: 10, img:'/FEMALE_READY/FEMALE_HAIR/Crespos/C0.png' }, { id: 11, img:'/FEMALE_READY/FEMALE_HAIR/Crespos/C1.png' }] },
       { id: 'liso', title: 'Liso', icon: GiHairStrands, options: [{ id: 1, img:'/FEMALE_READY/FEMALE_HAIR/Lisos/C1.png'}, { id: 2, img:'/FEMALE_READY/FEMALE_HAIR/Lisos/C2.png'}, { id: 3, img:'/FEMALE_READY/FEMALE_HAIR/Lisos/C3.png'}, { id: 12, img:'/FEMALE_READY/FEMALE_HAIR/Lisos/C0.png' }] },
