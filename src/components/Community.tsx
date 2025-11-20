@@ -102,7 +102,9 @@ export function Community({ userData, onBack }: CommunityProps) {
   const [visiblePostsCount, setVisiblePostsCount] = useState(5);
 
   const [loadingComments, setLoadingComments] = useState<string[]>([]);
+  const [shareMessage, setShareMessage] = useState<string>('');
   const [replyingTo, setReplyingTo] = useState<{ postId: string; commentId: string; author: string; authorId: string } | null>(null);
+  const [showCommentsModal, setShowCommentsModal] = useState<{ postId: string; comments: Comment[] } | null>(null);
 
   const frasesList: string[] = (frasesTxt || '').split(/\r?\n/).map((s: string) => s.trim()).filter(Boolean) as string[];
   const palavrasList: string[] = (palavrasTxt || '').split(/\r?\n/).map((s: string) => s.trim()).filter(Boolean) as string[];
@@ -495,6 +497,40 @@ export function Community({ userData, onBack }: CommunityProps) {
     }
   };
 
+  const handleShare = async (post: Post) => {
+    const shareData = {
+      title: `Post de ${post.author} - Raízes & Consciência`,
+      text: `"${post.content}"\n\nPor: ${post.author}\nCategoria: ${post.category}\nPublicado ${post.time}`,
+      url: window.location.href
+    };
+
+    // Tenta usar a Web Share API (funciona bem em mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        setShareMessage('Compartilhado com sucesso!');
+        setTimeout(() => setShareMessage(''), 3000);
+        return;
+      } catch (error) {
+        // Usuário cancelou ou erro, continua para fallback
+        console.log('Web Share API falhou, usando fallback');
+      }
+    }
+
+    // Fallback: copia para clipboard
+    try {
+      const shareText = `🌟 Raízes & Consciência\n\n"${post.content}"\n\n✍️ Por: ${post.author}\n🏷️ Categoria: ${post.category}\n🕒 ${post.time}\n\n💜 Compartilhado via Raízes & Consciência`;
+      await navigator.clipboard.writeText(shareText);
+      
+      setShareMessage('Conteúdo copiado para compartilhar!');
+      setTimeout(() => setShareMessage(''), 3000);
+    } catch (error) {
+      console.error('Erro ao copiar:', error);
+      setShareMessage('Erro ao compartilhar. Tente novamente.');
+      setTimeout(() => setShareMessage(''), 3000);
+    }
+  };
+
   return (
     <div className="py-8">
       <div className="flex items-center gap-4 mb-8">
@@ -505,6 +541,17 @@ export function Community({ userData, onBack }: CommunityProps) {
           <h1 className="text-purple-800">Comunidade</h1>
           <p className="text-gray-600">Compartilhe experiências e aprenda com outras pessoas</p>
         </div>
+        
+        {shareMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded-lg text-sm"
+          >
+            {shareMessage}
+          </motion.div>
+        )}
         
         {deletingPostId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -697,7 +744,29 @@ export function Community({ userData, onBack }: CommunityProps) {
                   <Card className="p-6 hover:shadow-lg transition-shadow">
                     
                     <div className="flex items-start gap-4 mb-4">
-                        {post.character ? (
+                      <div className="flex-grow">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-gray-800 font-semibold">{post.author}</p>
+                          <Badge variant="secondary" className="text-xs">
+                            {post.category}
+                          </Badge>
+                        </div>
+                        <p className="text-gray-500 text-sm">{post.time}</p>
+                      </div>
+                      {post.authorId === auth.currentUser?.uid && (
+                        <button
+                          onClick={() => confirmDeletePost(post.id)}
+                          className="text-gray-400 hover:text-gray-600 p-1"
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-start gap-4 mb-4">
+                      {post.character ? (
                         <Avatar3D
                           gender={post.character.gender}
                           bodyType={post.character.bodyType}
@@ -713,52 +782,41 @@ export function Community({ userData, onBack }: CommunityProps) {
                         </div>
                       )}
                       <div className="flex-grow">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-gray-800 font-semibold">{post.author}</p>
-                          <Badge variant="secondary" className="text-xs">
-                            {post.category}
-                          </Badge>
-                        </div>
-                        <p className="text-gray-500 text-sm">{post.time}</p>
+                        <p className="text-gray-700">{post.content}</p>
                       </div>
                     </div>
 
                     
-                    <p className="text-gray-700 mb-4">{post.content}</p>
-
-                    
-                    <div className="flex items-center gap-6 pt-4 border-t">
+                    <div className="flex items-center gap-4 pt-4 border-t">
                       <button
                         onClick={() => handleLike(post.id)}
-                        className={`flex items-center gap-2 transition-colors ${
+                        className={`p-2 transition-colors rounded-full hover:bg-gray-100 ${
                           post.likedBy.includes(auth.currentUser?.uid || '')
                             ? 'text-rose-600'
                             : 'text-gray-600 hover:text-rose-600'
                         }`}
                       >
-                        <Heart className={`w-5 h-5 ${post.likedBy.includes(auth.currentUser?.uid || '') ? 'fill-current' : ''}`} />
-                        <span className="text-sm">{post.likes}</span>
+                        <Heart className={`w-6 h-6 ${post.likedBy.includes(auth.currentUser?.uid || '') ? 'fill-current' : ''}`} />
                       </button>
-                      <button
-                        onClick={() => toggleComments(post.id)}
-                        className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        <span className="text-sm">{post.comments.length}</span>
-                      </button>
-                      <button className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors ml-auto">
-                        <Share2 className="w-5 h-5" />
-                        <span className="text-sm">Compartilhar</span>
-                      </button>
-                      {post.authorId === auth.currentUser?.uid && (
+                      <div className="relative">
                         <button
-                          onClick={() => confirmDeletePost(post.id)}
-                          className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors"
+                          onClick={() => toggleComments(post.id)}
+                          className="p-2 text-gray-600 hover:text-purple-600 transition-colors rounded-full hover:bg-gray-100"
                         >
-                          <Trash className="w-5 h-5" />
-                          <span className="text-sm">Apagar</span>
+                          <MessageCircle className="w-6 h-6" />
                         </button>
-                      )}
+                        {post.comments.filter(c => c.id).length > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            {post.comments.filter(c => c.id).length}
+                          </span>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => handleShare(post)}
+                        className="p-2 text-gray-600 hover:text-blue-600 transition-colors rounded-full hover:bg-gray-100"
+                      >
+                        <Share2 className="w-6 h-6" />
+                      </button>
                     </div>
 
                     
@@ -831,7 +889,7 @@ export function Community({ userData, onBack }: CommunityProps) {
                         ) : post.comments.length > 0 && post.comments[0].id ? (
                           
                           <div className="space-y-4 mt-4">
-                            {post.comments.map((comment) => (
+                            {post.comments.slice(0, 3).map((comment) => (
                               <div key={comment.id} className="flex gap-3 pl-2 border-l-2 border-gray-200">
                                 {comment.character ? (
                                         <Avatar3D
@@ -893,6 +951,17 @@ export function Community({ userData, onBack }: CommunityProps) {
                                 </div>
                               </div>
                             ))}
+                            {post.comments.length > 3 && (
+                              <div className="flex justify-center mt-4">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setShowCommentsModal({ postId: post.id, comments: post.comments })}
+                                  className="text-purple-600 border-purple-600 hover:bg-purple-50"
+                                >
+                                  Ver Mais ({post.comments.length - 3} comentários)
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           
@@ -987,6 +1056,92 @@ export function Community({ userData, onBack }: CommunityProps) {
           </Card>
         </div>
       </div>
+
+      {showCommentsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 z-40"
+            onClick={() => setShowCommentsModal(null)}
+            style={{
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)'
+            }}
+          />
+          <Card className="z-50 p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-purple-800">Comentários</h3>
+              <Button variant="ghost" onClick={() => setShowCommentsModal(null)}>
+                ✕
+              </Button>
+            </div>
+            <div className="space-y-4">
+              {(() => {
+                const post = posts.find(p => p.id === showCommentsModal.postId);
+                return post ? post.comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3 pl-2 border-l-2 border-gray-200">
+                    {comment.character ? (
+                      <Avatar3D
+                        gender={comment.character.gender}
+                        bodyType={comment.character.bodyType}
+                        skinColor={comment.character.skinColor}
+                        faceOption={comment.character.faceOption}
+                        hairId={comment.character.hairId}
+                        size={36}
+                        bgGradient="linear-gradient(135deg, #9333ea 0%, #7c3aed 50%, #6d28d9 100%)"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-lg">👤</span>
+                      </div>
+                    )}
+                    <div className="flex-grow">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-gray-800 text-sm font-semibold">{comment.author}</p>
+                        <p className="text-gray-500 text-xs">{formatRelativeTime(comment.createdAt)}</p>
+                      </div>
+                      <p className="text-gray-700 text-sm mb-2">
+                        {comment.replyTo && (
+                          <span className="text-purple-600 font-semibold mr-1">
+                            @{comment.replyTo}
+                          </span>
+                        )}
+                        {comment.content}
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleLikeComment(showCommentsModal.postId, comment.id)}
+                          className={`flex items-center gap-1 text-xs transition-colors ${
+                            comment.likedBy.includes(auth.currentUser?.uid || '')
+                              ? 'text-rose-600'
+                              : 'text-gray-600 hover:text-rose-600'
+                          }`}
+                        >
+                          <Heart className={`w-3 h-3 ${comment.likedBy.includes(auth.currentUser?.uid || '') ? 'fill-current' : ''}`} />
+                          <span>{comment.likes > 0 ? comment.likes : ''}</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setReplyingTo({
+                              postId: showCommentsModal.postId,
+                              commentId: comment.id,
+                              author: comment.author,
+                              authorId: comment.authorId
+                            });
+                            setShowCommentsModal(null); // Close modal to go back to post
+                          }}
+                          className="text-xs text-gray-600 hover:text-purple-600 transition-colors font-semibold"
+                        >
+                          Responder
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )) : null;
+              })()}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

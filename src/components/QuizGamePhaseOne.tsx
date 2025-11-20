@@ -12,7 +12,7 @@ import Avatar3D from './Avatar3D';
 type QuizGamePhaseOneProps = {
   userId: string; 
   userData: UserData;
-  onComplete: () => void;
+  onComplete: (score: number, total: number) => void;
 };
 
 type Question = {
@@ -229,7 +229,7 @@ export function QuizGamePhaseOne({ userId, userData, onComplete }: QuizGamePhase
       // Calculate final score from answers array to ensure accuracy
       const finalScore = answers.filter(a => a.isCorrect).length;
       await savePhaseOneResult(finalScore, answers);
-      onComplete();
+      onComplete(finalScore, shuffledQuestions.length);
     }
   };
 
@@ -391,7 +391,7 @@ export function QuizGamePhaseOne({ userId, userData, onComplete }: QuizGamePhase
                   onClick={handleNext}
                   className="px-8 bg-gray-900 hover:bg-gray-800 text-amber-400"
                 >
-                  {currentQuestion < shuffledQuestions.length - 1 ? 'Próxima Pergunta' : 'Ir para o Menu'}
+                  {currentQuestion < shuffledQuestions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultado'}
                 </Button>
               )}
             </div>

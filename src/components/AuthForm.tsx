@@ -6,6 +6,8 @@ import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
 
 type AuthFormProps = {
   onAuthComplete: (userId: string) => void;
@@ -44,6 +46,12 @@ export function AuthForm({ onAuthComplete }: AuthFormProps) {
     try {
       if (isSignUp) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Create user document in Firestore
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          email: email,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
         onAuthComplete(userCredential.user.uid);
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -157,6 +165,16 @@ export function AuthForm({ onAuthComplete }: AuthFormProps) {
             {loading ? 'Processando...' : isSignUp ? 'Cadastrar' : 'Entrar'}
           </Button>
         </form>
+
+        <div className="mt-6 text-center">
+          <Button 
+            onClick={() => window.location.href = '/'} 
+            variant="outline" 
+            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            Voltar à Home
+          </Button>
+        </div>
       </Card>
     </div>
   );

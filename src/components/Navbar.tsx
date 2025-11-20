@@ -41,14 +41,19 @@ export default function Navbar({ onNavigate }: NavbarProps): React.ReactElement 
           </a>
         </div>
 
-        {/* Hamburger Menu */}
-        <div
-          className={`hamburger ${isMenuOpen ? 'active' : ''}`}
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
+        {/* Hamburger Menu and Mobile CTA */}
+        <div className="mobile-actions">
+          <a href="/app" className="mobile-cta">
+            Entrar
+          </a>
+          <div
+            className={`hamburger ${isMenuOpen ? 'active' : ''}`}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
         </div>
 
         {/* Menu Links */}
@@ -79,7 +84,12 @@ export default function Navbar({ onNavigate }: NavbarProps): React.ReactElement 
             </a>
           </li>
           <li>
-            <a href="/app" className="nav-link nav-cta">
+            <a onClick={() => scrollToSection('gamificacao')} className="nav-link">
+              Gamificação
+            </a>
+          </li>
+          <li>
+            <a href="/app" className="nav-link nav-cta desktop-cta">
               Entrar
             </a>
           </li>

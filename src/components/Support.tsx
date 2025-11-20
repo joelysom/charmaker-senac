@@ -213,7 +213,11 @@ export function Support({ userData, onBack }: SupportProps) {
 
         {/* Website Button */}
         {resource.website && (
-          <Button variant="outline" className="w-full">
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => window.open(`https://${resource.website}`, '_blank')}
+          >
             <ExternalLink className="w-4 h-4 mr-2" />
             Visitar Site
           </Button>

@@ -110,18 +110,28 @@
   margin: 0 auto;
 }
 
-.landpage-wrapper .universidades-img img {
+.landpage-wrapper .universidades-img {
+  position: relative;
   width: 100%;
   max-width: 480px;
-  height: auto;
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  height: 480px; /* Assuming square images, adjust if needed */
 }
 
-.landpage-wrapper .universidades-img img:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 15px 50px rgba(0, 126, 219, 0.2);
+.landpage-wrapper .universidade-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.landpage-wrapper .universidade-slide.active {
+  opacity: 1;
 }
 
 .landpage-wrapper .universidades-text {
@@ -310,6 +320,145 @@
   background: var(--landpage-red);
 }
 
+/* ================= GAMIFICAÇÃO ================= */
+.landpage-wrapper .gamificacao {
+  padding: 100px 5% 20px;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(0, 126, 219, 0.05) 0%, rgba(248, 180, 0, 0.05) 100%);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.landpage-wrapper .gamificacao h2 {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 50px;
+  color: var(--landpage-text-dark);
+}
+
+.landpage-wrapper .gamificacao-content p {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--landpage-text-light);
+  margin-bottom: 60px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.landpage-wrapper .gamificacao-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+  justify-items: center;
+}
+
+.landpage-wrapper .gamificacao-card {
+  background: white;
+  padding: 40px 30px 0;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s ease;
+  text-align: center;
+  position: relative;
+  padding-bottom: 400px; /* space for img */
+}
+
+.landpage-wrapper .gamificacao-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+}
+
+.landpage-wrapper .gamificacao-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, var(--landpage-blue) 0%, var(--landpage-yellow) 100%);
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: white;
+}
+
+.landpage-wrapper .gamificacao-card h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: var(--landpage-text-dark);
+}
+
+.landpage-wrapper .gamificacao-card p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--landpage-text-light);
+}
+
+.landpage-wrapper .gamificacao-character {
+  width: 100%;
+  max-width: 1250px;
+  height: auto;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 12px;
+  filter: drop-shadow(0 0 20px rgba(248, 180, 0, 0.5));
+  transition: filter 0.3s ease;
+}
+
+.landpage-wrapper .gamificacao-character:hover {
+  filter: drop-shadow(0 0 30px rgba(248, 180, 0, 0.7));
+}
+
+.landpage-wrapper .gamificacao-cta {
+  margin-top: 60px;
+  text-align: center;
+}
+
+.landpage-wrapper .gamificacao-cta p {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--landpage-text-dark);
+  margin-bottom: 30px;
+}
+
+.landpage-wrapper .gamificacao-btn {
+  display: inline-block;
+  background: var(--landpage-yellow);
+  color: #000;
+  padding: 15px 40px;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(248, 180, 0, 0.3);
+}
+
+.landpage-wrapper .gamificacao-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(248, 180, 0, 0.4);
+}
+
+.landpage-wrapper .gamificacao-entrar-img {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 10px rgba(248, 180, 0, 0.5));
+}
+
+.landpage-wrapper .gamificacao-background {
+  background: linear-gradient(135deg, rgba(0, 126, 219, 0.05) 0%, rgba(248, 180, 0, 0.05) 100%);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
+}
+
 /* ============ RESPONSIVIDADE ============ */
 @media (max-width: 1200px) {
   .landpage-wrapper .universidades,
@@ -387,6 +536,66 @@
     width: 120px;
     height: 120px;
   }
+
+  .landpage-wrapper .gamificacao h2 {
+    font-size: 36px;
+    margin-bottom: 40px;
+  }
+
+  .landpage-wrapper .gamificacao-content p {
+    font-size: 16px;
+    margin-bottom: 40px;
+  }
+
+  .landpage-wrapper .gamificacao-grid {
+    gap: 30px;
+  }
+
+  .landpage-wrapper .gamificacao-card {
+    padding: 30px 20px 0;
+    padding-bottom: 350px;
+  }
+
+  .landpage-wrapper .gamificacao-character {
+    max-width: 1000px;
+  }
+
+  .landpage-wrapper .gamificacao-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+
+  .landpage-wrapper .gamificacao-card h3 {
+    font-size: 20px;
+  }
+
+  .landpage-wrapper .gamificacao-cta {
+    margin-top: 40px;
+  }
+
+  .landpage-wrapper .gamificacao-cta p {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+
+  .landpage-wrapper .gamificacao-btn {
+    padding: 12px 30px;
+    font-size: 16px;
+  }
+
+  .landpage-wrapper .gamificacao-character {
+    max-width: 120px;
+    margin-top: 15px;
+  }
+
+  .landpage-wrapper .causa-rectangle {
+    padding: 15px 5%;
+  }
+
+  .landpage-wrapper .causa-rectangle h2 {
+    font-size: 20px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -421,4 +630,99 @@
     width: 100%;
     max-width: 280px;
   }
+
+  .landpage-wrapper .gamificacao h2,
+  .landpage-wrapper .equipe h2 {
+    font-size: 24px;
+  }
+
+  .landpage-wrapper .gamificacao-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .landpage-wrapper .gamificacao-card {
+    padding: 20px 15px 0;
+    padding-bottom: 300px;
+  }
+
+  .landpage-wrapper .gamificacao-character {
+    max-width: 750px;
+  }
+
+  .landpage-wrapper .gamificacao-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+
+  .landpage-wrapper .gamificacao-card h3 {
+    font-size: 18px;
+  }
+
+  .landpage-wrapper .gamificacao-cta {
+    margin-top: 30px;
+  }
+
+  .landpage-wrapper .gamificacao-cta p {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .landpage-wrapper .gamificacao-btn {
+    padding: 10px 25px;
+    font-size: 14px;
+  }
+
+  .landpage-wrapper .gamificacao-character {
+    max-width: 750px;
+  }
+
+  .landpage-wrapper .causa-rectangle {
+    padding: 10px 5%;
+  }
+
+  .landpage-wrapper .causa-rectangle h2 {
+    font-size: 12px;
+  }
+}
+
+/* ============ FOOTER ============ */
+.landpage-wrapper .footer {
+  background: var(--landpage-black);
+  color: white;
+  text-align: center;
+  padding: 0 5% 20px;
+  font-size: 14px;
+  margin-top: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.landpage-wrapper .footer p {
+  margin: 0;
+}
+
+/* ============ ENTENDA NOSSA CAUSA ============ */
+.landpage-wrapper .causa-section {
+  padding: 0;
+  text-align: center;
+}
+
+.landpage-wrapper .causa-rectangle {
+  background: var(--landpage-black);
+  color: var(--landpage-yellow);
+  padding: 20px 5%;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  display: block;
+}
+
+.landpage-wrapper .causa-rectangle h2 {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  white-space: nowrap;
 }

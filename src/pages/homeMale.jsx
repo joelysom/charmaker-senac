@@ -432,6 +432,7 @@ function Home({ onDone }) {
   const [activeSkinModal, setActiveSkinModal] = useState(null)
   const [shownSkinModals, setShownSkinModals] = useState(new Set())
   const [isLoadingHair, setIsLoadingHair] = useState(false)
+  const [isModalExpanded, setIsModalExpanded] = useState(false)
   const previousHairRef = useRef(selectedHair)
   const loadingTimerRef = useRef(null)
   const hairLoadedRef = useRef(false)
@@ -445,11 +446,57 @@ function Home({ onDone }) {
   }, [])
 
   const skinColorInfo = {
-    skin1: { title: '🧑🏿 Pele Preta', description: 'A pele preta representa a rica ancestralidade africana...' },
-    skin2: { title: '🧑🏽 Pele Parda', description: 'A pele parda reflete a miscigenação brasileira...' },
-    skin3: { title: '🧑🏾 Pele Indígena', description: 'A pele indígena representa os povos originários...' },
-    skin4: { title: '🧑🏻 Pele Amarela', description: 'A pele amarela representa a herança asiática...' },
-    skin5: { title: '🧑🏼 Pele Branca', description: 'A pele branca reflete a influência europeia...' }
+    skin1: { 
+      title: '🧑🏿 Pele Preta', 
+      shortDescription: 'Características comuns em pessoas pretas: Pele com tons mais escuros, protegida pela melanina.',
+      fullDescription: `Características comuns em pessoas pretas: 
+
+Pele: Varia em tons mais escuros, sendo protegida naturalmente pela melanina. 
+Cabelo: Frequentemente crespo ou cacheado, com textura e curvatura marcantes. 
+Nariz: Pode ter um formato largo e achatado, com narinas mais abertas. 
+Lábios: Podem ser carnudos. 
+Estrutura óssea: Algumas pessoas podem ter traços como prognatismo (avançamento da mandíbula) e arcadas zigomáticas proeminentes.`
+    },
+    skin2: { 
+      title: '🧑🏽 Pele Parda', 
+      shortDescription: 'Características comuns de pessoas pardas: Cor da pele variando do pardo claro ao escuro.',
+      fullDescription: `Características comuns de pessoas pardas:
+
+Cor da pele: Varia do pardo claro ao pardo escuro, com tons intermediários entre o branco e o preto.
+Cabelos: Podem ser de textura grossa, densos, com curvatura ondulada, cacheada ou crespa.
+Lábios: Geralmente são mais cheios ou volumosos, com coloração mais escura que o normal.
+Nariz: Frequentemente mais largo, com base alargada e ponta arredondada.
+Sobrancelhas: Podem ser grossas e com pelos densos.`
+    },
+    skin3: { 
+      title: '🧑🏾 Pele Indígena', 
+      shortDescription: 'Características comuns de pessoas indígenas: Pele com tonalidade variando, geralmente amarelada ou avermelhada.',
+      fullDescription: `Características comuns de pessoas indígenas: 
+
+Pele: A tonalidade da pele varia tons mais claros ou mais escuros, geralmente com um tom amarelado ou avermelhado, e é descrita como mais escura em comparação com a dos europeus, mas não negra. Uma característica notável é a tendência a ter poucos pelos corporais, uma adaptação biológica ao clima tropical.
+Cabelos: Predominantemente lisos e escuros (pretos ou castanhos muito escuros).
+Olhos: Geralmente de cor castanha escura ou preta, com a forma dos olhos frequentemente descrita como amendoada.
+Estrutura Corporal: A altura e o tipo físico variam entre os grupos, com algumas etnias apresentando compleição física mais baixa e robusta, enquanto outras podem ser mais altas.`
+    },
+    skin4: { 
+      title: '🧑🏻 Pele Amarela', 
+      shortDescription: 'Características comuns de pessoas amarelas: Cabelo geralmente liso e de cor preta, olhos com formato inclinado.',
+      fullDescription: `Características comuns de pessoas amarelas:
+
+Cabelo: Geralmente liso e de cor preta.
+Olhos: Formato inclinado, descrito como "oblíquos" ou "rasgados".`
+    },
+    skin5: { 
+      title: '🧑🏼 Pele Branca', 
+      shortDescription: 'Características comuns de pessoas brancas: Pele clara com baixa quantidade de melanina.',
+      fullDescription: `Características comuns de pessoas brancas:
+
+Pele clara: A principal característica física associada ao termo "branco" é a pele com baixa quantidade de melanina, o que a torna mais clara. 
+Outros traços: A definição pode incluir outros traços físicos associados às populações europeias, mas a ênfase na cor da pele é a mais comum. 
+Pele: De tonalidade clara, variando entre o branco e o amarelado.
+Rosto: Pômulos frequentemente salientes e nariz reto.
+Corpo: Tórax curto e largo e pouca presença de pelos corporais.`
+    }
   }
 
   useEffect(() => {
@@ -472,7 +519,7 @@ function Home({ onDone }) {
     return () => { mounted = false }
   }, [])
 
-  const closeSkinModal = () => setActiveSkinModal(null)
+  const closeSkinModal = () => { setActiveSkinModal(null); setIsModalExpanded(false); }
   useEffect(() => {
     if (selectedSection === 'body' && selectedSubSection === 'skinColor' && selectedSkinColor) {
       if (!shownSkinModals.has(selectedSkinColor)) {
@@ -735,7 +782,10 @@ function Home({ onDone }) {
           <div className="skin-modal-bubble">
             <button className="skin-modal-close" onClick={closeSkinModal}><IoMdClose size={20} /></button>
             <h3>{skinColorInfo[activeSkinModal].title}</h3>
-            <p>{skinColorInfo[activeSkinModal].description}</p>
+            <p style={{ whiteSpace: 'pre-line' }}>{isModalExpanded ? skinColorInfo[activeSkinModal].fullDescription : skinColorInfo[activeSkinModal].shortDescription}</p>
+            <button onClick={() => setIsModalExpanded(!isModalExpanded)} style={{ marginTop: '10px', background: 'none', border: '1px solid #ccc', padding: '5px 10px', cursor: 'pointer' }}>
+              {isModalExpanded ? 'Mostrar menos' : 'Ler mais..'}
+            </button>
           </div>
         </div>
       )}

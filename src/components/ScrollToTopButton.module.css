@@ -1,0 +1,28 @@
+.button {
+  position: fixed !important;
+  bottom: 1.5rem !important;
+  right: 1.5rem !important;
+  z-index: 100 !important;
+  width: 4rem !important;
+  height: 4rem !important;
+  border-radius: 50% !important;
+  background-color: #dc2626 !important;
+  border: 4px solid white !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.3s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+}
+
+.button:hover {
+  background-color: #b91c1c !important;
+  transform: scale(1.1) !important;
+}
+
+.icon {
+  width: 2rem !important;
+  height: 2rem !important;
+  color: white !important;
+}

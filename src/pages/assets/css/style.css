@@ -140,7 +140,7 @@
 :root{
   /*======= Main colors =======*/
   --first-color: #fff;
-  --second-color: #5d9afc;
+  --second-color: #ffc400;
   --third-color: #000;
 
   /*======= Other colors =======*/
@@ -819,12 +819,12 @@ body{
   }
 
   .slide .animal-name {
-    top: 90px;
+    top: 70px;
     font-size: 5vw;
   }
 
   .higher-text-slide4 {
-    top: 105px !important;
+    top: 85px !important;
   }
 
   .larger-text-slide6 {
@@ -836,7 +836,7 @@ body{
   }
 
   .lower-text-slide7 {
-    top: 110px !important;
+    top: 100px !important;
   }
 
   .larger-text-slide2 {
@@ -844,12 +844,12 @@ body{
   }
 
   .slide .animal-name-pa {
-    top: 70px;
+    top: 30px;
     font-size: 4vw;
   }
 
   .lower-text-slide2 {
-    top: 110px !important;
+    top: 80px !important;
   }
 
   .larger-text-slide3 {
@@ -857,11 +857,15 @@ body{
   }
 
   .lower-text-slide3 {
-    top: 110px !important;
+    top: 80px !important;
+  }
+
+  .larger-text-slide4 {
+    font-size: 7vw !important;
   }
 
   .lower-text-slide8 {
-    top: 120px !important;
+    top: 140px !important;
   }
 
   .lower-text-slide9 {
@@ -869,12 +873,12 @@ body{
   }
 
   .slide .animal-name-pa2 {
-    top: 40px;
+    top: 0px;
     font-size: 4vw;
   }
 
   .slide .animal-name-ex {
-    top: 85px;
+    top: 75px;
     font-size: 7.5vw;
   }
 

@@ -1,6 +1,6 @@
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Trophy, Star, Award, Heart, RefreshCw } from 'lucide-react';
+import { Trophy, Star, Award, Heart } from 'lucide-react';
 import { motion } from 'motion/react';
 import { UserData } from '../App';
 import Avatar3D from './Avatar3D';
@@ -152,13 +152,9 @@ export function ResultScreen({ userData, score, totalQuestions, onRestart, onCon
           </div>
 
           {/* Action Button */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            <Button onClick={onContinue} className="flex-1 bg-gray-900 hover:bg-gray-800 text-amber-400" size="lg">
+          <div className="flex justify-center w-full">
+            <Button onClick={onContinue} className="bg-gray-900 hover:bg-gray-800 text-amber-400 px-8 py-3" size="lg">
               Explorar Plataforma
-            </Button>
-            <Button onClick={onRestart} variant="outline" className="flex-1" size="lg">
-              <RefreshCw className="w-5 h-5 mr-2" />
-              Refazer Quiz
             </Button>
           </div>
         </motion.div>

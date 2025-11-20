@@ -1,9 +1,69 @@
-import React, { Suspense, useMemo, useEffect, useRef } from 'react'
+import React, { Suspense, useMemo, useEffect, useRef, useState, createContext, useContext } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { useGLTF, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import ErrorBoundary from './ErrorBoundary'
+
+// ============================================
+// 🚀 SISTEMA DE CARREGAMENTO PROGRESSIVO DE AVATARES
+// ============================================
+
+// Contexto global para controlar carregamento de avatares
+const AvatarLoadContext = createContext()
+
+// Hook para controlar carregamento sequencial
+function useAvatarLoader(avatarKey) {
+  const [canLoad, setCanLoad] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
+  
+  useEffect(() => {
+    // Registrar avatar na fila global
+    if (typeof window !== 'undefined') {
+      window.avatarLoadQueue = window.avatarLoadQueue || []
+      window.avatarLoadQueue.push({ key: avatarKey, setCanLoad })
+      
+      // Processar fila (máximo 3 simultâneos)
+      processAvatarQueue()
+    }
+    
+    return () => {
+      // Remover da fila quando componente desmonta
+      if (typeof window !== 'undefined' && window.avatarLoadQueue) {
+        window.avatarLoadQueue = window.avatarLoadQueue.filter(item => item.key !== avatarKey)
+        processAvatarQueue()
+      }
+    }
+  }, [avatarKey])
+  
+  const markAsLoaded = () => {
+    setIsLoaded(true)
+    // Liberar slot para próximo avatar
+    if (typeof window !== 'undefined') {
+      window.activeAvatarLoads = (window.activeAvatarLoads || 0) - 1
+      processAvatarQueue()
+    }
+  }
+  
+  return { canLoad, isLoaded, markAsLoaded }
+}
+
+// Processar fila de avatares
+function processAvatarQueue() {
+  if (typeof window === 'undefined') return
+  
+  window.activeAvatarLoads = window.activeAvatarLoads || 0
+  window.avatarLoadQueue = window.avatarLoadQueue || []
+  
+  // Enquanto houver slots disponíveis (máximo 3) e avatares na fila
+  while (window.activeAvatarLoads < 3 && window.avatarLoadQueue.length > 0) {
+    const nextAvatar = window.avatarLoadQueue.shift()
+    if (nextAvatar) {
+      window.activeAvatarLoads++
+      nextAvatar.setCanLoad(true)
+    }
+  }
+}
 
 // ============================================
 // 🎨 MAPEAMENTO DE TEXTURAS CORRETO
@@ -112,7 +172,7 @@ if (typeof window !== 'undefined') {
 // 🧍 COMPONENTE DE AVATAR
 // ============================================
 
-function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instanceId }) {
+function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instanceId, onLoaded }) {
   const basePath = gender === 'female' ? '/models/female' : '/models/male'
   const bodyPrefix = gender === 'female' ? 'GBody' : 'MBody'
   const facePrefix = gender === 'female' ? 'GFace' : 'MFace'
@@ -135,6 +195,17 @@ function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instan
   const body = useGLTF(bodyPath)
   const face = useGLTF(facePath)
   const hair = useGLTF(hairPath)
+
+  console.log('Body scene children:', body.scene ? body.scene.children.map(c => c.name) : 'no scene')
+  console.log('Face scene children:', face.scene ? face.scene.children.map(c => c.name) : 'no scene')
+  console.log('Hair scene children:', hair.scene ? hair.scene.children.map(c => c.name) : 'no scene')
+
+  // Efeito para marcar como carregado quando todos os modelos estiverem prontos
+  useEffect(() => {
+    if (body?.scene && face?.scene && hair?.scene && onLoaded) {
+      onLoaded()
+    }
+  }, [body?.scene, face?.scene, hair?.scene, onLoaded])
 
   // Clonagem dos modelos com otimizações mobile
   const bodyClone = useMemo(() => {
@@ -304,6 +375,7 @@ function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instan
 
   return (
     <>
+      {console.log('AvatarPreview render', bodyClone ? 'body' : 'no body', faceClone ? 'face' : 'no face', hairClone ? 'hair' : 'no hair')}
       {bodyClone && <primitive object={bodyClone} />}
       {faceClone && <primitive object={faceClone} />}
       {hairClone && <primitive object={hairClone} />}
@@ -344,6 +416,9 @@ export default function Avatar3D({
   const instanceId = useRef(Math.random()).current
   const avatarKey = `${gender}-${bodyType}-${skinColor}-${faceOption}-${hairId}-${instanceId}`
   const isMobile = useMemo(() => isMobileDevice(), [])
+  
+  // Sistema de carregamento progressivo
+  const { canLoad, isLoaded, markAsLoaded } = useAvatarLoader(avatarKey)
 
   const modelPresets = gender === 'female' ? {
     position: [0, -0.169, 0],
@@ -366,8 +441,21 @@ export default function Avatar3D({
       flexShrink: 0,
       background: bgGradient 
     }}>
-      <ErrorBoundary>
-        <Suspense fallback={
+      {console.log('Avatar3D render, canLoad:', canLoad, 'isLoaded:', isLoaded)}
+      {!canLoad ? (
+        // Placeholder enquanto aguarda permissão para carregar
+        <div style={{
+          width: '100%', 
+          height: '100%', 
+          background: '#1f2937', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center'
+        }}>
+          <span style={{ color: '#6b7280', fontSize: '10px' }}>Aguardando...</span>
+        </div>
+      ) : (
+        <ErrorBoundary fallback={
           <div style={{
             width: '100%', 
             height: '100%', 
@@ -376,43 +464,59 @@ export default function Avatar3D({
             alignItems: 'center', 
             justifyContent: 'center'
           }}>
-            <span style={{ color: '#6b7280', fontSize: '10px' }}>Carregando...</span>
+            {console.log('ErrorBoundary fallback')}
+            <span style={{ color: '#6b7280', fontSize: '10px' }}>Erro</span>
           </div>
         }>
-          <Canvas
-            key={avatarKey}
-            style={{ width: '100%', height: '100%' }}
-            gl={{ 
-              antialias: !isMobile, 
-              alpha: true, 
-              powerPreference: isMobile ? 'low-power' : 'high-performance',
-              stencil: false,
-              depth: true
-            }}
-            dpr={isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 1.5)}
-            performance={{ min: 0.5 }}
-          >
-            <CameraController cameraDistance={modelPresets.cameraDistance} />
-            <ambientLight intensity={isMobile ? 1.5 : 1.2} />
-            {!isMobile && <directionalLight position={[5, 5, 5]} intensity={1} />}
-            <group 
-              position={modelPresets.position} 
-              rotation={modelPresets.rotation} 
-              scale={modelPresets.scale}
+          <Suspense fallback={
+            <div style={{
+              width: '100%', 
+              height: '100%', 
+              background: '#1f2937', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center'
+            }}>
+              {console.log('Suspense fallback')}
+              <span style={{ color: '#6b7280', fontSize: '10px' }}>Carregando...</span>
+            </div>
+          }>
+            <Canvas
+              key={avatarKey}
+              style={{ width: '100%', height: '100%' }}
+              gl={{ 
+                antialias: !isMobile, 
+                alpha: true, 
+                powerPreference: isMobile ? 'low-power' : 'high-performance',
+                stencil: false,
+                depth: true
+              }}
+              dpr={isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 1.5)}
+              performance={{ min: 0.5 }}
             >
-              <AvatarPreview
-                gender={gender}
-                bodyType={bodyType}
-                skinColor={skinColor}
-                faceOption={faceOption}
-                hairId={hairId}
-                instanceId={instanceId}
-              />
-            </group>
-            <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
-          </Canvas>
-        </Suspense>
-      </ErrorBoundary>
+              <CameraController cameraDistance={modelPresets.cameraDistance} />
+              <ambientLight intensity={isMobile ? 1.5 : 1.2} />
+              {!isMobile && <directionalLight position={[5, 5, 5]} intensity={1} />}
+              <group 
+                position={modelPresets.position} 
+                rotation={modelPresets.rotation} 
+                scale={modelPresets.scale}
+              >
+                <AvatarPreview
+                  gender={gender}
+                  bodyType={bodyType}
+                  skinColor={skinColor}
+                  faceOption={faceOption}
+                  hairId={hairId}
+                  instanceId={instanceId}
+                  onLoaded={markAsLoaded}
+                />
+              </group>
+              <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
+            </Canvas>
+          </Suspense>
+        </ErrorBoundary>
+      )}
     </div>
   )
 }

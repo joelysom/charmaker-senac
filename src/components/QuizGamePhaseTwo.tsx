@@ -14,6 +14,7 @@ type QuizGamePhaseTwoProps = {
   userId: string; 
   userData: UserData;
   onComplete: (totalAccumulatedScore: number, phaseTwoScore: number, totalPhaseTwoQuestions: number) => void;
+  onExit: () => void;
 };
 
 type Question = {
@@ -253,7 +254,7 @@ function processAndShuffleQuestions(questionsToShuffle: Question[]): Question[] 
   });
 }
 
-export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhaseTwoProps) {
+export function QuizGamePhaseTwo({ userId, userData, onComplete, onExit }: QuizGamePhaseTwoProps) {
   const [shuffledQuestions] = useState(() => processAndShuffleQuestions(phaseTwoQuestions));
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -267,6 +268,7 @@ export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhase
   const [lastAnswerWasIncorrect, setLastAnswerWasIncorrect] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(true);
   const [phaseOneScore, setPhaseOneScore] = useState(0);
+  const [completed, setCompleted] = useState(false);
 
   // Load saved progress and Phase 1 score
   useEffect(() => {
@@ -362,10 +364,13 @@ export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhase
       // Ensure latest progress is saved
       await saveProgressToFirestore(answers, score);
 
+      // Update localStorage to trigger menu refresh
+      localStorage.setItem('quizProgressUpdated', Date.now().toString());
+
       console.log('Progress saved successfully! Returning to menu...');
       
-      // Navigate back to menu
-      window.location.reload(); // Simple way to go back to menu
+      // Navigate to menu without reload
+      onExit();
     } catch (e) {
       console.error('Erro ao salvar progresso:', e);
     }
@@ -477,6 +482,15 @@ export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhase
       isCorrect: isCorrect
     }];
 
+    console.log('🎯 QuizPhaseTwo - handleAnswer:', {
+      currentAnswersLength: answers.length,
+      newAnswersLength: newAnswers.length,
+      newAnswers: newAnswers,
+      isCorrect,
+      selectedAnswer,
+      correctAnswer: question.correctAnswer
+    });
+
     setAnswers(newAnswers);
     setShowResult(true);
 
@@ -484,6 +498,9 @@ export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhase
     // Save current Phase 2 score (total score - Phase 1 score)
     const phaseTwoScore = isCorrect ? (score + 1 - phaseOneScore) : (score - phaseOneScore);
     saveProgressToFirestore(newAnswers, isCorrect ? score + 1 : score, phaseTwoScore);
+
+    // Update localStorage to trigger menu refresh
+    localStorage.setItem('quizProgressUpdated', Date.now().toString());
   };
 
   const saveProgressToFirestore = async (currentAnswers: typeof answers, totalScore: number, phaseTwoScore?: number, questionIndex?: number) => {
@@ -501,24 +518,26 @@ export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhase
         timestamp: Date.now()
       };
 
-      console.log('Salvando progresso da Phase 2:', {
-        questionsAnswered: currentAnswers.length,
+      console.log('💾 QuizPhaseTwo - Saving progress:', {
+        answersCount: currentAnswers.length,
+        answers: currentAnswers,
         totalScore,
         phaseTwoScore: progressData.phaseTwoScore,
-        phaseOneScore,
-        nextQuestion: progressData.currentQuestion
+        questionIndex: progressData.currentQuestion
       });
 
       const progressRef = doc(db, 'users', userId, 'quizProgress', 'phase2');
       await setDoc(progressRef, progressData);
       
-      console.log('Progresso salvo com sucesso!');
+      console.log('✅ QuizPhaseTwo - Progress saved successfully!');
     } catch (e) {
       console.error('Erro ao auto-salvar progresso:', e);
     }
   };
 
   const handleNext = () => {
+    if (completed) return;
+
     setShowResult(false);
     setSelectedAnswer(null);
     setAnswered(false);
@@ -534,7 +553,11 @@ export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhase
       // Save progress with the next question index
       const phaseTwoScore = score - phaseOneScore;
       saveProgressToFirestore(answers, score, phaseTwoScore, nextQuestion);
+
+      // Update localStorage to trigger menu refresh
+      localStorage.setItem('quizProgressUpdated', Date.now().toString());
     } else {
+      setCompleted(true);
       // Calculate final score from answers array to ensure accuracy
       const phaseTwoOnlyScore = answers.filter(a => a.isCorrect).length;
       const finalTotalScore = phaseOneScore + phaseTwoOnlyScore;
@@ -549,6 +572,9 @@ export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhase
       savePhaseTwoResult(phaseTwoOnlyScore, answers); // Pass ONLY Phase 2 score
       // Pass total accumulated score, Phase 2 score only, and total Phase 2 questions
       onComplete(finalTotalScore, phaseTwoOnlyScore, shuffledQuestions.length);
+
+      // Update localStorage to trigger menu refresh
+      localStorage.setItem('quizProgressUpdated', Date.now().toString());
     }
   };
 
@@ -715,32 +741,31 @@ export function QuizGamePhaseTwo({ userId, userData, onComplete }: QuizGamePhase
                 </motion.div>
               )}
 
-              <div className="flex justify-between gap-3">
-                <Button 
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <Button
                   onClick={saveProgressAndExit}
+                  disabled={answered || showResult}
                   variant="outline"
-                  className="px-6"
+                  className="flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed disabled:hover:bg-gray-100"
                 >
                   Continuar Depois
                 </Button>
-                <div className="flex gap-3">
-                  {!showResult ? (
-                    <Button 
-                      onClick={handleAnswer}
-                      disabled={selectedAnswer === null}
-                      className="px-8 bg-gray-900 hover:bg-gray-800 text-amber-400"
-                    >
-                      Responder
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={handleNext}
-                      className="px-8 bg-gray-900 hover:bg-gray-800 text-amber-400"
-                    >
-                      {currentQuestion < shuffledQuestions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultado'}
-                    </Button>
-                  )}
-                </div>
+                {!showResult ? (
+                  <Button
+                    onClick={handleAnswer}
+                    disabled={selectedAnswer === null}
+                    className="flex-1 px-6 py-3 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-amber-400 text-sm font-medium transition-all duration-200"
+                  >
+                    Responder
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleNext}
+                    className="flex-1 px-6 py-3 bg-gray-900 hover:bg-gray-800 text-amber-400 text-sm font-medium transition-all duration-200"
+                  >
+                    {currentQuestion < shuffledQuestions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultado'}
+                  </Button>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>

@@ -13,10 +13,11 @@ import { Library } from './components/Library';
 import { LocalsPE } from './components/LocalsPE';
 import { Stories } from './components/Stories';
 import { Support } from './components/Support';
+import { ScrollToTopButton } from './components/ScrollToTopButton';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from './firebase/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import HomeFemale from './pages/homeFemale';
 import HomeMale from './pages/homeMale';
 import AdminPage from './pages/admin';
@@ -29,9 +30,11 @@ export type UserData = {
   email?: string;
 };
 
-export type GameStep = 'auth' | 'profile' | 'avatar' | 'quizPhaseOne' | 'quizPhaseTwo' | 'quiz' | 'result' | 'resultPhaseTwo' | 'menu' | 'community' | 'library' | 'locals' | 'stories' | 'support';
+export type GameStep = 'auth' | 'profile' | 'avatar' | 'quizPhaseOne' | 'quizPhaseTwo' | 'quiz' | 'result' | 'resultPhaseTwo' | 'resultPhaseOne' | 'menu' | 'community' | 'library' | 'locals' | 'stories' | 'support';
 
-export default function App() {
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState<GameStep>('auth');
   const [userData, setUserData] = useState<UserData>({ name: '', age: 0, avatar: '', email: '' });
   const [score, setScore] = useState(0);
@@ -41,10 +44,36 @@ export default function App() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
 
+  // Sync currentStep with URL
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/app') {
+      // Default to menu if just /app
+      if (isUserAuthenticated && currentStep !== 'auth' && currentStep !== 'profile' && currentStep !== 'avatar' && currentStep !== 'quizPhaseOne' && currentStep !== 'quizPhaseTwo' && currentStep !== 'quiz' && currentStep !== 'result' && currentStep !== 'resultPhaseTwo' && currentStep !== 'resultPhaseOne') {
+        navigate('/app/menu', { replace: true });
+      }
+    } else if (path.startsWith('/app/')) {
+      const step = path.split('/').pop();
+      // Only sync URL to currentStep if not in auth-related steps and not in result screens
+      if (step && ['menu', 'community', 'library', 'locals', 'stories', 'support', 'quizPhaseTwo'].includes(step) && currentStep !== 'auth' && currentStep !== 'resultPhaseOne' && currentStep !== 'resultPhaseTwo') {
+        setCurrentStep(step as GameStep);
+      }
+    }
+  }, [location, isUserAuthenticated, currentStep, navigate]);
+
   // Monitorar mudanças de autenticação
   useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    console.log('🔐 App - Auth state changed:', currentUser ? 'LOGGED_IN' : 'LOGGED_OUT');
+    
+    // Não interferir com a página admin - ela tem sua própria autenticação
+    if (location.pathname.startsWith('/admin')) {
+      console.log('🔐 App - Skipping auth navigation for admin page');
+      return;
+    }
+    
     if (currentUser) {
+      console.log('🔐 App - User logged in:', currentUser.uid);
       setUserId(currentUser.uid);
       setUserData((prev) => ({ ...prev, email: currentUser.email || '' }));
       setIsUserAuthenticated(true);
@@ -57,16 +86,16 @@ export default function App() {
           getDoc(userDocRef),
           getDoc(charDocRef)
         ]);
-        
+
         if (userDoc.exists()) {
-          const userDataFromDB = userDoc.data(); 
+          const userDataFromDB = userDoc.data();
           setUserData((prev) => ({
             ...prev,
             name: userDataFromDB.name || '',
             age: userDataFromDB.age || 0,
             email: currentUser.email || '',
           }));
-          
+
           if (charDoc.exists()) {
             const charData = charDoc.data();
             setUserData((prev) => ({
@@ -78,9 +107,9 @@ export default function App() {
             const hasCompletedPhaseOne = userDataFromDB?.quizStats?.phaseOneCompleted;
 
             if (hasCompletedQuiz) {
-              setCurrentStep('menu');
+              navigate('/app/menu');
             } else if (hasCompletedPhaseOne) {
-              setCurrentStep('menu');
+              navigate('/app/menu');
             } else {
               setCurrentStep('quizPhaseOne');
             }
@@ -95,9 +124,11 @@ export default function App() {
         setCurrentStep('profile');
       }
     } else {
+      console.log('🔐 App - User logged out, redirecting to auth');
       setIsUserAuthenticated(false);
       setCurrentStep('auth');
       setUserId(null);
+      // Não navegar para '/', pois o AuthForm deve aparecer na rota atual quando currentStep === 'auth'
     }
   });
 
@@ -119,8 +150,10 @@ export default function App() {
     setCurrentStep('quizPhaseOne');
   };
 
-  const handlePhaseOneComplete = () => {
-    setCurrentStep('menu');
+  const handlePhaseOneComplete = (score: number, total: number) => {
+    setScore(score);
+    setTotalQuestions(total);
+    setCurrentStep('resultPhaseOne');
   };
 
   const handlePhaseTwoComplete = (totalScore: number, phaseTwoScore: number, phaseTwoQuestions: number) => {
@@ -140,7 +173,7 @@ export default function App() {
   };
 
   const handleResultContinue = () => {
-    setCurrentStep('menu');
+    navigateTo('menu');
   };
 
   const handleRestart = async () => {
@@ -172,8 +205,10 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
       setCurrentStep(step);
     });
   } else {
-
     setCurrentStep(step);
+    if (['menu', 'community', 'library', 'locals', 'stories', 'support', 'quizPhaseTwo'].includes(step)) {
+      navigate(`/app/${step}`);
+    }
   }
 };
 
@@ -201,7 +236,8 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
           <QuizGamePhaseTwo 
             userId={userId}
             userData={userData} 
-            onComplete={handlePhaseTwoComplete} 
+            onComplete={handlePhaseTwoComplete}
+            onExit={() => navigateTo('menu')}
           />
         )}
         {currentStep === 'quiz' && userId && ( // Adicionada verificação '&& userId', aumentar segurança.
@@ -209,6 +245,15 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
             userId={userId}
             userData={userData} 
             onComplete={handleQuizComplete} 
+          />
+        )}
+        {currentStep === 'resultPhaseOne' && (
+          <ResultScreen 
+            userData={userData} 
+            score={score} 
+            totalQuestions={totalQuestions}
+            onRestart={handleRestart}
+            onContinue={handleResultContinue}
           />
         )}
         {currentStep === 'result' && (
@@ -252,10 +297,11 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
   )
 
   return (
-    <Router>
+    <>
+      <ScrollToTopButton />
       <Routes>
         <Route path="/" element={<Landpage />} />
-        <Route path="/app" element={appMain} />
+        <Route path="/app/*" element={appMain} />
         <Route
           path="/home-female"
           element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { 
@@ -295,6 +341,14 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
         />
         <Route path="/admin" element={<AdminPage />} />
       </Routes>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

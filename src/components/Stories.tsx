@@ -7,7 +7,6 @@ import {
   Sparkles,
   ChevronRight
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { motion } from 'motion/react';
 import { UserData } from '../App';
 
@@ -239,63 +238,108 @@ export function Stories({ userData, onBack }: StoriesProps) {
         </div>
       </div>
 
-      {/* Story Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          {selectedStory && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-purple-800 text-2xl">
+      {/* Story Modal */}
+      {isDialogOpen && selectedStory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 z-40"
+            onClick={() => setIsDialogOpen(false)}
+            style={{
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)'
+            }}
+          />
+          <div className="relative z-50 w-full h-full bg-white overflow-y-auto">
+            {/* Header com botão de fechar */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between shadow-sm">
+              <div className="flex-1">
+                <h1 className="text-purple-800 text-xl font-bold">
                   {selectedStory.name}
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedStory.title} - {selectedStory.period}
-                </DialogDescription>
-              </DialogHeader>
+                </h1>
+                <p className="text-gray-600 text-sm">
+                  {selectedStory.title} • {selectedStory.period}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsDialogOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors ml-4"
+                aria-label="Fechar"
+              >
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
 
-              <div className="space-y-6 py-4">
-                {/* Full Story */}
-                <div>
-                  <h4 className="text-gray-800 mb-3">História</h4>
-                  <p className="text-gray-700 leading-relaxed">
-                    {selectedStory.fullStory}
-                  </p>
-                </div>
+            {/* Conteúdo */}
+            <div className="px-4 py-6 space-y-6">
+              {/* Badge da área */}
+              <div className="flex justify-center">
+                <Badge className="text-sm px-3 py-1">{selectedStory.area}</Badge>
+              </div>
 
-                {/* Achievements */}
-                <div>
-                  <h4 className="text-gray-800 mb-3">Principais Conquistas</h4>
+              {/* História completa */}
+              <div>
+                <h2 className="text-gray-800 text-lg font-semibold mb-3">História</h2>
+                <p className="text-gray-700 leading-relaxed text-base">
+                  {selectedStory.fullStory}
+                </p>
+              </div>
+
+              {/* Conquistas */}
+              <div>
+                <h2 className="text-gray-800 text-lg font-semibold mb-3">Principais Conquistas</h2>
+                <div className="bg-gray-50 rounded-lg p-4">
                   <ul className="space-y-2">
                     {selectedStory.achievements.map((achievement, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-gray-700">
-                        <span className="text-purple-600 mt-1">•</span>
+                      <li key={idx} className="flex items-start gap-3 text-gray-700">
+                        <span className="text-purple-600 mt-1 flex-shrink-0">✓</span>
                         <span>{achievement}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
+              </div>
 
-                {/* Quote */}
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-xl border-l-4 border-purple-600">
-                  <p className="text-gray-700 italic">"{selectedStory.quote}"</p>
-                  <p className="text-purple-600 mt-2">— {selectedStory.name}</p>
-                </div>
-
-                {/* Reflection */}
-                <div className="bg-amber-50 border-2 border-amber-200 p-5 rounded-xl">
-                  <h4 className="text-amber-800 mb-2">Reflexão</h4>
-                  <p className="text-gray-700 text-sm">
-                    A história de {selectedStory.name} nos mostra que, mesmo diante das maiores 
-                    adversidades, a resistência, o conhecimento e a determinação podem transformar 
-                    não apenas vidas individuais, mas toda a sociedade. Cada conquista representa 
-                    uma porta aberta para as próximas gerações.
-                  </p>
+              {/* Citação */}
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-xl border-l-4 border-purple-600">
+                <div className="flex items-start gap-3">
+                  <span className="text-3xl text-purple-600">"</span>
+                  <div className="flex-1">
+                    <p className="text-gray-700 italic text-base leading-relaxed">
+                      {selectedStory.quote}
+                    </p>
+                    <p className="text-purple-600 mt-3 font-medium">
+                      — {selectedStory.name}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+
+              {/* Reflexão */}
+              <div className="bg-amber-50 border-2 border-amber-200 p-5 rounded-xl">
+                <h2 className="text-amber-800 text-lg font-semibold mb-3">Reflexão</h2>
+                <p className="text-gray-700 text-base leading-relaxed">
+                  A história de {selectedStory.name} nos mostra que, mesmo diante das maiores
+                  adversidades, a resistência, o conhecimento e a determinação podem transformar
+                  não apenas vidas individuais, mas toda a sociedade. Cada conquista representa
+                  uma porta aberta para as próximas gerações.
+                </p>
+              </div>
+
+              {/* Botão de fechar no final */}
+              <div className="flex justify-center pt-4">
+                <Button
+                  onClick={() => setIsDialogOpen(false)}
+                  className="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                >
+                  Fechar História
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

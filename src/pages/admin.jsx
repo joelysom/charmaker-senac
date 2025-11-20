@@ -3,7 +3,7 @@ import { Card } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { auth, db } from '../firebase/firebase'
-import { FiUsers, FiUser, FiRefreshCw, FiShield, FiChevronRight } from 'react-icons/fi'
+import { FiUsers, FiUser, FiRefreshCw, FiShield, FiChevronRight, FiChevronLeft, FiTrash2 } from 'react-icons/fi'
 import {
   collection,
   getDocs,
@@ -13,8 +13,11 @@ import {
   getDoc,
   updateDoc,
   setDoc,
+  deleteDoc,
   orderBy,
   limit,
+  startAfter,
+  writeBatch,
 } from 'firebase/firestore'
 import styles from './admin.module.css'
 
@@ -31,6 +34,16 @@ export default function AdminPage() {
   const [userEmail, setUserEmail] = useState('')
   const [userPassword, setUserPassword] = useState('')
   const [showUserLoginForm, setShowUserLoginForm] = useState(false)
+
+  const [pageCursors, setPageCursors] = useState([])
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrev, setHasPrev] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const pageSize = 10
+
+  const [totalUsers, setTotalUsers] = useState(0)
+  const [totalCharacters, setTotalCharacters] = useState(0)
+  const [totalInfractions, setTotalInfractions] = useState(0)
 
   const [users, setUsers] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(false)
@@ -187,12 +200,48 @@ export default function AdminPage() {
     }
   }
 
-  async function fetchUsers() {
+  const loadTotals = async () => {
+    try {
+      // Filter out deleted documents
+      const usersSnap = await getDocs(collection(db, 'users'))
+      setTotalUsers(usersSnap.size)
+      const charsSnap = await getDocs(collection(db, 'characters'))
+      setTotalCharacters(charsSnap.size)
+      const violSnap = await getDocs(collection(db, 'violations'))
+      setTotalInfractions(violSnap.size)
+    } catch (e) {
+      console.error('Erro ao carregar totais:', e)
+    }
+  }
+
+  async function fetchUsers(page = 0) {
     setLoadingUsers(true)
     try {
-      const usersSnap = await getDocs(query(collection(db, 'users'), orderBy('name')))
+      let q = query(collection(db, 'users'), orderBy('name'))
+      if (page > 0 && pageCursors[page - 1]) {
+        q = query(q, startAfter(pageCursors[page - 1]), limit(pageSize + 1))
+      } else {
+        q = query(q, limit(pageSize + 1))
+      }
+      const usersSnap = await getDocs(q)
+      const docs = usersSnap.docs
+      const hasNextPage = docs.length > pageSize
+      setPageCursors(prev => {
+        const newCursors = [...prev]
+        if (hasNextPage) {
+          newCursors[page] = docs[pageSize]
+        }
+        return newCursors
+      })
+      setHasNext(hasNextPage)
+      setHasPrev(page > 0)
+      setCurrentPage(page)
+      if (page === 0) {
+        await loadTotals()
+      }
+      const usersToProcess = docs.slice(0, pageSize)
       const usersList = []
-      for (const u of usersSnap.docs) {
+      for (const u of usersToProcess) {
         const data = u.data()
         const uid = u.id
         // get character
@@ -287,6 +336,87 @@ export default function AdminPage() {
     }
   }
 
+  const nextPage = () => {
+    if (hasNext) {
+      fetchUsers(currentPage + 1)
+    }
+  }
+
+  const prevPage = () => {
+    if (hasPrev) {
+      fetchUsers(currentPage - 1)
+    }
+  }
+
+  const deleteAllData = async () => {
+    const confirm1 = window.confirm('⚠️ ATENÇÃO: Esta ação é EXTREMAMENTE DESTRUTIVA!\n\nVocê está prestes a DELETAR TODOS os dados da aplicação:\n• Todos os usuários\n• Todos os personagens\n• Todos os resultados de quiz\n• Todas as infrações\n\nEsta ação é IRREVERSÍVEL e afetará TODOS os usuários!\n\nTem certeza que deseja continuar?')
+    if (!confirm1) return
+    const input = window.prompt('🔥 CONFIRMAÇÃO FINAL: Digite "DELETAR TUDO" para confirmar:')
+    if (input !== 'DELETAR TUDO') {
+      alert('Confirmação incorreta. Operação cancelada.')
+      return
+    }
+
+    try {
+      alert('🗑️ Iniciando exclusão de todos os dados... Isso pode levar alguns minutos.')
+
+      // Function to delete documents in batches
+      const deleteCollection = async (collectionRef, batchSize = 500) => {
+        return new Promise((resolve, reject) => {
+          let lastDoc = null
+          const deleteNextBatch = async () => {
+            try {
+              let q = query(collectionRef, limit(batchSize))
+              if (lastDoc) {
+                q = query(collectionRef, limit(batchSize), startAfter(lastDoc))
+              }
+              const snapshot = await getDocs(q)
+              if (snapshot.size === 0) {
+                resolve()
+                return
+              }
+
+              const batch = writeBatch(db)
+              snapshot.docs.forEach((doc) => {
+                batch.delete(doc.ref)
+              })
+
+              await batch.commit()
+              console.log(`Deleted ${snapshot.size} documents from ${collectionRef.path}`)
+
+              lastDoc = snapshot.docs[snapshot.docs.length - 1]
+
+              // Continue with next batch
+              setTimeout(deleteNextBatch, 100) // Small delay to avoid rate limits
+            } catch (error) {
+              console.error('Error deleting batch:', error)
+              reject(error)
+            }
+          }
+          deleteNextBatch()
+        })
+      }
+
+      // Delete quiz results first (nested collections)
+      const usersSnap = await getDocs(collection(db, 'users'))
+      for (const userDoc of usersSnap.docs) {
+        const quizResultsRef = collection(db, 'users', userDoc.id, 'quizResults')
+        await deleteCollection(quizResultsRef)
+      }
+
+      // Delete main collections
+      await deleteCollection(collection(db, 'characters'))
+      await deleteCollection(collection(db, 'violations'))
+      await deleteCollection(collection(db, 'users'))
+
+      alert('✅ Todos os dados foram deletados com sucesso!')
+      fetchUsers(0) // refresh
+    } catch (e) {
+      console.error('Erro ao deletar todos os dados:', e)
+      alert('❌ Erro ao deletar dados: ' + (e.message || e))
+    }
+  }
+
   const openAdminModal = (user) => {
     setSelectedUser(user)
     setNewAdminLevel(user.adminLevel || 0)
@@ -319,7 +449,7 @@ export default function AdminPage() {
       alert('✅ Nível de admin salvo com sucesso.')
 
       // refresh the users from server so stats and UI reflect persisted changes
-      fetchUsers()
+      fetchUsers(currentPage)
     } catch (e) {
       console.error('Erro ao salvar nível:', e)
       alert('Erro ao salvar nível de admin: ' + (e.message || e))
@@ -358,7 +488,7 @@ export default function AdminPage() {
       
       // Delete character
       try {
-        await setDoc(doc(db, 'characters', uid), { deleted: true, deletedAt: new Date().toISOString() })
+        await deleteDoc(doc(db, 'characters', uid))
       } catch (e) {
         console.warn('Erro ao deletar personagem:', e)
       }
@@ -367,7 +497,7 @@ export default function AdminPage() {
       try {
         const quizResultsSnap = await getDocs(collection(db, 'users', uid, 'quizResults'))
         for (const qDoc of quizResultsSnap.docs) {
-          await setDoc(doc(db, 'users', uid, 'quizResults', qDoc.id), { deleted: true })
+          await deleteDoc(doc(db, 'users', uid, 'quizResults', qDoc.id))
         }
       } catch (e) {
         console.warn('Erro ao deletar resultados de quiz:', e)
@@ -375,7 +505,7 @@ export default function AdminPage() {
 
       // Delete quiz progress
       try {
-        await setDoc(doc(db, 'users', uid, 'quizProgress', 'phase2'), { deleted: true })
+        await deleteDoc(doc(db, 'users', uid, 'quizProgress', 'phase2'))
       } catch (e) {
         console.warn('Erro ao deletar progresso:', e)
       }
@@ -384,18 +514,18 @@ export default function AdminPage() {
       try {
         const violSnap = await getDocs(query(collection(db, 'violations'), where('userId', '==', uid)))
         for (const vDoc of violSnap.docs) {
-          await setDoc(doc(db, 'violations', vDoc.id), { deleted: true })
+          await deleteDoc(doc(db, 'violations', vDoc.id))
         }
       } catch (e) {
         console.warn('Erro ao deletar infrações:', e)
       }
 
       // Delete user document
-      await setDoc(doc(db, 'users', uid), { deleted: true, deletedAt: new Date().toISOString() })
+      await deleteDoc(doc(db, 'users', uid))
 
       setShowAdminModal(false)
       alert('✅ Usuário deletado com sucesso!')
-      fetchUsers()
+      fetchUsers(currentPage)
     } catch (e) {
       console.error('Erro ao deletar usuário:', e)
       alert('❌ Erro ao deletar usuário: ' + (e.message || e))
@@ -421,11 +551,11 @@ export default function AdminPage() {
       // Delete all quiz results
       const quizResultsSnap = await getDocs(collection(db, 'users', uid, 'quizResults'))
       for (const qDoc of quizResultsSnap.docs) {
-        await setDoc(doc(db, 'users', uid, 'quizResults', qDoc.id), { deleted: true })
+        await deleteDoc(doc(db, 'users', uid, 'quizResults', qDoc.id))
       }
 
       // Delete quiz progress
-      await setDoc(doc(db, 'users', uid, 'quizProgress', 'phase2'), { deleted: true })
+      await deleteDoc(doc(db, 'users', uid, 'quizProgress', 'phase2'))
 
       // Reset quizStats
       await setDoc(doc(db, 'users', uid), {
@@ -440,7 +570,7 @@ export default function AdminPage() {
       }, { merge: true })
 
       alert('✅ Quiz resetado com sucesso!')
-      fetchUsers()
+      fetchUsers(currentPage)
     } catch (e) {
       console.error('Erro ao resetar quiz:', e)
       alert('❌ Erro ao resetar quiz: ' + (e.message || e))
@@ -616,7 +746,8 @@ export default function AdminPage() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="ghost" onClick={() => { setAdminAuthenticated(false); setUsers([]); setFilterName(''); setFilterAge(''); setFilterGender(''); setFilterQuiz(''); setFilterInfractions('') }}><FiUser className="inline mr-2" />Sair</Button>
-              <Button onClick={fetchUsers}><FiRefreshCw className="inline mr-2" />Atualizar</Button>
+              <Button variant="destructive" onClick={deleteAllData}><FiTrash2 className="inline mr-2" />Deletar Todos</Button>
+              <Button onClick={() => fetchUsers(0)}><FiRefreshCw className="inline mr-2" />Atualizar</Button>
             </div>
           </div>
         )}
@@ -634,9 +765,9 @@ export default function AdminPage() {
               </Button>
             </div>
             <div className="grid grid-cols-3 gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-2"><FiUsers className="text-amber-500" /> <span><span className="font-bold text-gray-900">{users.length}</span><span className="text-xs text-gray-400"> usuários</span></span></div>
-              <div className="flex items-center gap-2"><FiUser className="text-green-500" /> <span><span className="font-bold text-gray-900">{users.filter(u=>u.character).length}</span><span className="text-xs text-gray-400"> personagens</span></span></div>
-              <div className="flex items-center gap-2"><FiRefreshCw className="text-red-500" /> <span><span className="font-bold text-gray-900">{users.reduce((acc,u)=>acc + (u.infractions||0),0)}</span><span className="text-xs text-gray-400"> infrações</span></span></div>
+              <div className="flex items-center gap-2"><FiUsers className="text-amber-500" /> <span><span className="font-bold text-gray-900">{totalUsers}</span><span className="text-xs text-gray-400"> usuários</span></span></div>
+              <div className="flex items-center gap-2"><FiUser className="text-green-500" /> <span><span className="font-bold text-gray-900">{totalCharacters}</span><span className="text-xs text-gray-400"> personagens</span></span></div>
+              <div className="flex items-center gap-2"><FiRefreshCw className="text-red-500" /> <span><span className="font-bold text-gray-900">{totalInfractions}</span><span className="text-xs text-gray-400"> infrações</span></span></div>
             </div>
           </div>
 
@@ -765,6 +896,16 @@ export default function AdminPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                  
+                  <div className="flex justify-center items-center gap-4 mt-6">
+                    <Button variant="outline" onClick={prevPage} disabled={!hasPrev}>
+                      <FiChevronLeft className="inline mr-2" /> Anterior
+                    </Button>
+                    <span className="text-sm text-gray-600">Página {currentPage + 1}</span>
+                    <Button variant="outline" onClick={nextPage} disabled={!hasNext}>
+                      Próximo <FiChevronRight className="inline ml-2" />
+                    </Button>
                   </div>
                   
                   {getFilteredUsers().length === 0 && (

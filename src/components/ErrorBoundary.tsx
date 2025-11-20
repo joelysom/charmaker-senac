@@ -2,6 +2,7 @@ import React from 'react'
 
 type Props = {
   children: React.ReactNode
+  fallback?: React.ReactNode
 }
 
 type State = {
@@ -26,7 +27,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return (
+      return this.props.fallback || (
         <div className="p-6 rounded bg-red-50 border border-red-200">
           <h3 className="text-red-800 font-semibold mb-2">Erro ao carregar cena 3D</h3>
           <p className="text-sm text-red-700 mb-4">Parece que os arquivos de modelo não estão disponíveis no servidor. Verifique se a pasta <code>/models</code> existe e contém os arquivos .glb.</p>

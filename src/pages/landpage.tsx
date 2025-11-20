@@ -8,10 +8,18 @@ import '../styles/landpage.css';
 const Index: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [modalOpen, setModalOpen] = useState<number | null>(null);
+  const [currentUniversidadeImage, setCurrentUniversidadeImage] = useState(0);
 
   const slides = Array.from({ length: 9 }, (_, i) => i);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
+  const universidadeImages = [
+    '/landpage/landpage_(24).jpeg',
+    '/landpage/landpage_(28).jpeg',
+    '/landpage/landpage_(13).jpeg',
+    '/landpage/landpage_(1).jpeg'
+  ];
 
   // Autoplay slider
   useEffect(() => {
@@ -20,6 +28,14 @@ const Index: React.FC = () => {
     }, 8500);
     return () => clearInterval(interval);
   }, [slides.length]);
+
+  // Autoplay universidade images
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentUniversidadeImage(prev => (prev + 1) % universidadeImages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [universidadeImages.length]);
 
   // Text truncation
   useEffect(() => {
@@ -47,14 +63,6 @@ const Index: React.FC = () => {
       }
     });
   }, []);
-
-  const nextSlide = () => {
-    setCurrentSlide(prev => (prev + 1) % slides.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide(prev => (prev === 0 ? slides.length - 1 : prev - 1));
-  };
 
   const openModal = (index: number) => {
     setModalOpen(index);
@@ -132,18 +140,12 @@ const Index: React.FC = () => {
 
                 <div className="slide-images">
                   <img src={`assets/images/bg-${index + 1}.jpg`} alt="" className="slide-bg-img" />
-                  <h1 className={`${slideClasses[index]} ${index === 5 ? 'larger-text-slide6 lower-text-slide6' : ''} ${index === 3 ? 'higher-text-slide4 slide4-text' : ''} ${index === 1 ? 'larger-text-slide2 lower-text-slide2' : ''} ${index === 2 ? 'larger-text-slide3 lower-text-slide3' : ''} ${index === 6 ? 'lower-text-slide7' : ''} ${index === 7 ? 'lower-text-slide8' : ''} ${index === 8 ? 'lower-text-slide9' : ''}`} dangerouslySetInnerHTML={{ __html: slideTitles[index] }}></h1>
+                  <h1 className={`${slideClasses[index]} ${index === 5 ? 'larger-text-slide6 lower-text-slide6' : ''} ${index === 3 ? 'higher-text-slide4 slide4-text larger-text-slide4' : ''} ${index === 1 ? 'larger-text-slide2 lower-text-slide2' : ''} ${index === 2 ? 'larger-text-slide3 lower-text-slide3' : ''} ${index === 6 ? 'lower-text-slide7' : ''} ${index === 7 ? 'lower-text-slide8' : ''} ${index === 8 ? 'lower-text-slide9' : ''}`} dangerouslySetInnerHTML={{ __html: slideTitles[index] }}></h1>
                   <img src={`assets/images/animal-${index + 1}.png`} alt="" className={`slide-animal-img ${index === 2 ? 'larger-animal larger-animal-slide3' : ''} ${index === 3 ? 'larger-animal-slide4' : ''}`} />
                 </div>
                 <div className="slide-text-content">
                   <h3 className="slide-caption">{slideCaptions[index]}</h3>
                   <p className="slide-paragraph" dangerouslySetInnerHTML={{ __html: slideParagraphs[index] }}></p>
-                  {index === currentSlide && (
-                    <div className="slider-navigation">
-                      <div className="prev-btn" onClick={prevSlide}><i className="ri-arrow-left-s-line"></i> Anterior</div>
-                      <div className="next-btn" onClick={nextSlide}>Próximo <i className="ri-arrow-right-s-line"></i></div>
-                    </div>
-                  )}
                 </div>
                 <div className={`slide-video-modal ${modalOpen === index ? 'active' : ''}`}>
                   <i className="ri-close-line video-close-btn" onClick={() => closeModal(index)}></i>
@@ -177,13 +179,17 @@ const Index: React.FC = () => {
           </div>
         </section>
 
+        {/* ENTENDA NOSSA CAUSA */}
+        <section className="causa-section">
+          <div className="causa-rectangle">
+            <h2>Entenda Nossa Causa</h2>
+          </div>
+        </section>
+
         {/* UNIVERSIDADES → MUNDO */}
         <section id="universidades" className="universidades">
-          <div className="universidades-img">
-            <img src="https://via.placeholder.com/500x500" alt="Universidades" />
-          </div>
           <div className="universidades-text">
-            <h2>Das Universidades para mundo</h2>
+            <h2>Do Senac para o mundo</h2>
             <p>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus
               imperdiet metus sed lorem mollis, a hendrerit justo posuere.
@@ -198,25 +204,33 @@ const Index: React.FC = () => {
               eget lacus pharetra accumsan eget vel libero.
             </p>
           </div>
+          <div className="universidades-img">
+            {universidadeImages.map((img, index) => (
+              <img
+                key={index}
+                src={img}
+                alt="Universidades"
+                className={`universidade-slide ${index === currentUniversidadeImage ? 'active' : ''}`}
+              />
+            ))}
+          </div>
         </section>
 
         {/* PROPÓSITO / MISSÃO */}
         <section id="missao" className="proposito-missao">
           <div className="box">
-            <h3>Propósito</h3>
-            <img src="https://via.placeholder.com/400x300" alt="Proposito" />
+            <h3>Visão</h3>
+            <img src="/landpage/landpage_(22).jpeg" alt="Visao" />
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non
-              arcu vitae odio malesuada.
+              Ser referência nacional em iniciativas educacionais digitais voltadas para a valorização da diversidade étnico-racial, contribuindo para a formação de cidadãos críticos, engajados e comprometidos com a equidade e o respeito às diferenças.
             </p>
           </div>
 
           <div className="box">
             <h3>Missão</h3>
-            <img src="https://via.placeholder.com/400x300" alt="Missao" />
+            <img src="/landpage/landpage_(20).jpeg" alt="Missao" />
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce vitae
-              justo sodales, fermentum.
+              Promover a educação racial e o reconhecimento da identidade negra por meio de uma plataforma digital interativa, incentivando a valorização da cultura afro-brasileira, a inclusão social e a construção de uma sociedade mais justa e consciente.
             </p>
           </div>
         </section>
@@ -224,14 +238,16 @@ const Index: React.FC = () => {
         {/* VALORES */}
         <section id="valores" className="valores">
           <div className="valores-img">
-            <img src="https://via.placeholder.com/500x350" alt="Valores" />
+            <img src="/landpage/landpage_(14).jpeg" alt="Valores" />
           </div>
           <div className="valores-text">
             <h3>Valores</h3>
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum
-              ut fermentum risus. Mauris bibendum erat vitae leo malesuada, id
-              varius orci rhoncus.
+              Inclusão: Garantir espaço para todas as vozes, respeitando e valorizando a diversidade.<br /><br />
+Educação Transformadora: Utilizar conhecimento como ferramenta para combater preconceitos e promover mudanças sociais.<br /><br />
+Respeito: Reconhecer e honrar as raízes culturais e históricas da população negra.<br /><br />
+Inovação Social: Criar soluções digitais criativas que aproximem pessoas e ideias.<br /><br />
+Empoderamento: Fortalecer identidades e estimular protagonismo individual e coletivo.
             </p>
           </div>
         </section>
@@ -248,7 +264,49 @@ const Index: React.FC = () => {
             ))}
           </div>
         </section>
+
+        {/* GAMIFICAÇÃO */}
+        <section id="gamificacao" className="gamificacao">
+          <h2>Conheça nossa Gamificação</h2>
+          <div className="gamificacao-content">
+            <p>
+              Descubra como nossa plataforma gamificada transforma o aprendizado em uma experiência envolvente e interativa.
+            </p>
+            <div className="gamificacao-grid">
+              <div className="gamificacao-card">
+                <div className="gamificacao-icon"></div>
+                <h3>Crie seu Avatar</h3>
+                <p>Crie seu Avatar na gamificação, do seu jeito da forma como você se enxerga!</p>
+                <img src="/landpage/characters/avatar.png" alt="Avatar" className="gamificacao-character" />
+              </div>
+              <div className="gamificacao-card">
+                <div className="gamificacao-icon"></div>
+                <h3>Quiz</h3>
+                <p>Participe do quiz da comunidade! Aprenda como combater o racismo e lidar com situações.</p>
+                <img src="/landpage/characters/Quiz.png" alt="Quiz" className="gamificacao-character" />
+              </div>
+              <div className="gamificacao-card">
+                <div className="gamificacao-icon"></div>
+                <h3>Comunidade</h3>
+                <p>Acesse nossa comunidade, compartilhe sua historia e o que achou do nosso projeto e evento!</p>
+                <img src="/landpage/characters/comunidade.png" alt="Comunidade" className="gamificacao-character" />
+              </div>
+            </div>
+            <div className="gamificacao-cta">
+              <p>Pronto para começar?</p>
+              <a href="/app" className="gamificacao-btn">COMEÇAR</a>
+            </div>
+          </div>
+        </section>
       </main>
+
+      <div className="gamificacao-background">
+        <img src="/landpage/characters/Entrar.png" alt="Entrar" className="gamificacao-entrar-img" />
+      </div>
+
+      <footer className="footer">
+        <p>&copy; 2025 Raízes & Consciência - SENAC. Todos os direitos reservados.</p>
+      </footer>
     </div>
   );
 };

@@ -157,6 +157,13 @@ export function LocalsPE({ userData, onBack }: LocalsPEProps) {
     ? locals 
     : locals.filter(l => l.category === selectedCategory);
 
+  const openInMaps = (local: Local) => {
+    const address = `${local.address}, ${local.neighborhood}, ${local.city}, Pernambuco, Brasil`;
+    const encodedAddress = encodeURIComponent(address);
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    window.open(mapsUrl, '_blank');
+  };
+
   return (
     <div className="py-8">
       {/* Header */}
@@ -250,7 +257,7 @@ export function LocalsPE({ userData, onBack }: LocalsPEProps) {
                     <div className="flex items-center gap-3 text-sm">
                       <Globe className="w-4 h-4 text-purple-600 flex-shrink-0" />
                       <a 
-                        href={`https://${local.website}`} 
+                        href={local.website.startsWith('http') ? local.website : `https://${local.website}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-purple-600 hover:underline"
@@ -274,7 +281,7 @@ export function LocalsPE({ userData, onBack }: LocalsPEProps) {
                 </div>
 
                 {/* Action Button */}
-                <Button className="w-full">
+                <Button className="w-full" onClick={() => openInMaps(local)}>
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Ver no Mapa
                 </Button>

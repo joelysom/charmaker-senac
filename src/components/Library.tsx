@@ -29,6 +29,7 @@ type LibraryItem = {
   year?: string;
   genre: string;
   rating: number;
+  link?: string;
 };
 
 const musicData: LibraryItem[] = [
@@ -39,7 +40,8 @@ const musicData: LibraryItem[] = [
     description: 'Álbum que celebra a negritude e aborda questões sociais e raciais no Brasil',
     year: '2019',
     genre: 'Rap/Hip-Hop',
-    rating: 5
+    rating: 5,
+    link: 'https://open.spotify.com/intl-pt/album/5cUY5chmS86cdonhoFdn8h'
   },
   {
     id: 2,
@@ -48,7 +50,8 @@ const musicData: LibraryItem[] = [
     description: 'Obra icônica de uma das maiores vozes do Brasil',
     year: '1967',
     genre: 'MPB/Samba',
-    rating: 5
+    rating: 5,
+    link: 'https://open.spotify.com/intl-pt/artist/4cn4gMq0KXORHeYA45PcBi'
   },
   {
     id: 3,
@@ -57,7 +60,8 @@ const musicData: LibraryItem[] = [
     description: 'Música emblemática sobre a realidade da população negra periférica',
     year: '2002',
     genre: 'Rap',
-    rating: 5
+    rating: 5,
+    link: 'https://open.spotify.com/intl-pt/track/3ytXzEJFeVydFfmUhHvti8'
   },
   {
     id: 4,
@@ -66,7 +70,8 @@ const musicData: LibraryItem[] = [
     description: 'Álbum que mistura blues, rap e reflexões sobre negritude',
     year: '2018',
     genre: 'Rap/Blues',
-    rating: 5
+    rating: 5,
+    link: 'https://open.spotify.com/intl-pt/album/0QMVSKhzT4u2DEd8qdlz4I'
   },
   {
     id: 5,
@@ -75,7 +80,8 @@ const musicData: LibraryItem[] = [
     description: 'Um dos álbuns mais importantes do rap brasileiro',
     year: '1997',
     genre: 'Rap',
-    rating: 5
+    rating: 5,
+    link: 'https://open.spotify.com/intl-pt/album/1UzrzuOmZfBgXyS3pgKD10'
   }
 ];
 
@@ -87,7 +93,8 @@ const booksData: LibraryItem[] = [
     description: 'Guia essencial para entender e combater o racismo estrutural',
     year: '2019',
     genre: 'Não-ficção',
-    rating: 5
+    rating: 5,
+    link: 'https://www.amazon.com.br/Pequeno-manual-antirracista-Djamila-Ribeiro/dp/8535932879'
   },
   {
     id: 2,
@@ -96,7 +103,8 @@ const booksData: LibraryItem[] = [
     description: 'Romance sobre duas irmãs negras e a luta pela terra',
     year: '2019',
     genre: 'Ficção',
-    rating: 5
+    rating: 5,
+    link: 'https://www.amazon.com.br/Torto-arado-Itamar-Vieira-Junior/dp/6580309318'
   },
   {
     id: 3,
@@ -105,7 +113,8 @@ const booksData: LibraryItem[] = [
     description: 'Diário de uma mulher negra na favela do Canindé',
     year: '1960',
     genre: 'Autobiografia',
-    rating: 5
+    rating: 5,
+    link: 'https://www.amazon.com.br/Quarto-Despejo-Diário-Uma-Favelada/dp/8508171277'
   },
   {
     id: 4,
@@ -114,16 +123,18 @@ const booksData: LibraryItem[] = [
     description: 'Reflexão sobre estereótipos e a importância de múltiplas narrativas',
     year: '2009',
     genre: 'Ensaio',
-    rating: 5
+    rating: 5,
+    link: 'https://a.co/d/8wIKXwc'
   },
   {
     id: 5,
-    title: 'Memórias da Plantação',
+    title: 'Memórias de uma Plantação',
     creator: 'Grada Kilomba',
     description: 'Episódios de racismo cotidiano e trauma colonial',
     year: '2008',
     genre: 'Não-ficção',
-    rating: 5
+    rating: 5,
+    link: 'https://a.co/d/eh1Ne4h'
   },
   {
     id: 6,
@@ -132,7 +143,8 @@ const booksData: LibraryItem[] = [
     description: 'Contos sobre mulheres negras e suas vivências',
     year: '2014',
     genre: 'Contos',
-    rating: 5
+    rating: 5,
+    link: 'https://a.co/d/c1zEkJZ'
   }
 ];
 
@@ -144,7 +156,8 @@ const moviesData: LibraryItem[] = [
     description: 'Celebração da cultura africana e representatividade negra',
     year: '2018',
     genre: 'Ação/Ficção',
-    rating: 5
+    rating: 5,
+    link: 'https://www.imdb.com/title/tt1825683/'
   },
   {
     id: 2,
@@ -153,48 +166,49 @@ const moviesData: LibraryItem[] = [
     description: 'Paralelo entre escravidão e desigualdade social no Brasil',
     year: '2005',
     genre: 'Drama',
-    rating: 5
+    rating: 5,
+    link: 'https://www.imdb.com/pt/title/tt0458074'
   },
   {
     id: 3,
-    title: 'Vazante',
-    creator: 'Daniela Thomas',
-    description: 'Retrato do Brasil escravocrata do século XIX',
-    year: '2017',
-    genre: 'Drama Histórico',
-    rating: 4
+    title: 'Besouro',
+    creator: 'João Daniel Tikhomiroff',
+    description: 'Baseado na vida de um lendário lutador de capoeira baiano, "Besouro" conta a fantástica história de um jovem brasileiro de ascendência africana em busca da sua missão.',
+    year: '2009',
+    genre: 'Drama/Biográfico',
+    rating: 4,
+    link: 'https://www.imdb.com/pt/title/tt1322277'
   },
   {
     id: 4,
-    title: 'Má',
-    creator: 'Aly Muritiba',
-    description: 'História sobre uma empregada doméstica e questões de classe e raça',
-    year: '2022',
-    genre: 'Drama',
-    rating: 4
-  },
-  {
-    id: 5,
     title: 'Cidade de Deus',
     creator: 'Fernando Meirelles',
     description: 'Retrato da realidade de jovens negros na periferia',
     year: '2002',
     genre: 'Drama/Crime',
-    rating: 5
+    rating: 5,
+    link: 'https://www.imdb.com/pt/title/tt0317248/?ref_=nv_sr_srsg_0_tt_8_nm_0_in_0_q_Cidade%2520de%2520Deus'
   },
   {
-    id: 6,
+    id: 5,
     title: 'Histórias Cruzadas',
     creator: 'Tate Taylor',
-    description: 'Empregadas negras no sul dos EUA durante os anos 60',
+    description: 'Uma aspirante a escritora durante o movimento dos direitos civis nos anos 60 nos Estados Unidos decide escrever um livro sobre as experiências das criadas negras que trabalhavam para as famílias brancas.',
     year: '2011',
     genre: 'Drama',
-    rating: 5
+    rating: 5,
+    link: 'https://www.imdb.com/pt/title/tt1454029'
   }
 ];
 
 export function Library({ userData, onBack }: LibraryProps) {
   const [searchTerm, setSearchTerm] = useState('');
+
+  const handleItemClick = (link?: string) => {
+    if (link) {
+      window.open(link, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }).map((_, index) => (
@@ -247,9 +261,14 @@ export function Library({ userData, onBack }: LibraryProps) {
                   {item.description}
                 </p>
                 
-                <Button variant="outline" className="w-full group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                <Button 
+                  variant="outline" 
+                  className="w-full group-hover:bg-purple-600 group-hover:text-white transition-colors"
+                  onClick={() => handleItemClick(item.link)}
+                  disabled={!item.link}
+                >
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Ver mais
+                  {item.link ? 'Ver mais' : 'Em breve'}
                 </Button>
               </div>
             </Card>

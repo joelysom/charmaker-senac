@@ -15,7 +15,7 @@ import {
 import { motion } from 'motion/react';
 import { UserData, GameStep } from '../App';
 import Avatar3D from './Avatar3D';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../firebase/firebase';
 import { doc, getDoc, collection, query, where, orderBy, getDocs, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
@@ -87,6 +87,8 @@ export function MainMenu({ userData, onNavigate }: MainMenuProps) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const [progressTimestamp, setProgressTimestamp] = useState<string>('');
+  const lastCheckedTimestamp = useRef<string>('');
 
   // Load character data and notifications from Firestore
   useEffect(() => {
@@ -103,9 +105,15 @@ export function MainMenu({ userData, onNavigate }: MainMenuProps) {
         }
 
         // Load phase two progress and quiz stats
+        console.log('📊 MainMenu - Loading initial progress for user:', user.uid);
         const userDoc = await getDoc(doc(db, 'users', user.uid));
+        console.log('📊 MainMenu - User document exists:', userDoc.exists());
+        
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          console.log('📊 MainMenu - User data:', userData);
+          console.log('📊 MainMenu - Quiz stats:', userData?.quizStats);
+          
           const isPhase2Completed = userData?.quizStats?.phaseTwoCompleted || false;
           setPhaseTwoCompleted(isPhase2Completed);
           
@@ -121,15 +129,29 @@ export function MainMenu({ userData, onNavigate }: MainMenuProps) {
             const progressRef = doc(db, 'users', user.uid, 'quizProgress', 'phase2');
             const progressDoc = await getDoc(progressRef);
             
-            if (progressDoc.exists() && !progressDoc.data().deleted) {
-              const savedProgress = progressDoc.data();
-              setPhaseTwoProgress(savedProgress.answers?.length || 0);
+            console.log('📊 MainMenu - Progress document exists:', progressDoc.exists());
+            if (progressDoc.exists()) {
+              const progressData = progressDoc.data();
+              console.log('📊 MainMenu - Progress data:', progressData);
+              console.log('📊 MainMenu - Progress deleted flag:', progressData.deleted);
+              console.log('📊 MainMenu - Progress answers:', progressData.answers);
+              console.log('📊 MainMenu - Progress answers length:', progressData.answers?.length || 0);
+              
+              if (!progressData.deleted) {
+                setPhaseTwoProgress(progressData.answers?.length || 0);
+              } else {
+                console.log('📊 MainMenu - Progress marked as deleted, setting to 0');
+                setPhaseTwoProgress(0);
+              }
             } else {
+              console.log('📊 MainMenu - No progress document found, setting to 0');
               setPhaseTwoProgress(0);
             }
           } else {
             setPhaseTwoProgress(12); // All questions completed
           }
+        } else {
+          console.log('📊 MainMenu - No user document found');
         }
 
         // Load notifications
@@ -142,6 +164,86 @@ export function MainMenu({ userData, onNavigate }: MainMenuProps) {
     }
     loadCharacter();
   }, []);
+
+  // Check for progress updates from quiz
+  useEffect(() => {
+    console.log('🔄 MainMenu - Setting up progress polling');
+
+    const checkProgressUpdate = () => {
+      const currentTimestamp = localStorage.getItem('quizProgressUpdated') || '';
+      console.log('🔄 MainMenu - Polling check - Current localStorage timestamp:', currentTimestamp);
+      console.log('🔄 MainMenu - Polling check - Last checked timestamp:', lastCheckedTimestamp.current);
+
+      if (currentTimestamp !== lastCheckedTimestamp.current) {
+        console.log('🔄 MainMenu - Timestamp changed, reloading progress');
+        lastCheckedTimestamp.current = currentTimestamp;
+        setProgressTimestamp(currentTimestamp);
+        // Reload progress data
+        const reloadProgress = async () => {
+          try {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            console.log('🔄 MainMenu - Reloading progress due to timestamp change');
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const isPhase2Completed = userData?.quizStats?.phaseTwoCompleted || false;
+              setPhaseTwoCompleted(isPhase2Completed);
+
+              // Get total correct answers and total questions
+              const quizStats = userData?.quizStats;
+              if (quizStats) {
+                setTotalCorrect(quizStats.correct || 0);
+                setTotalQuestions(quizStats.total || 15);
+              }
+
+              if (!isPhase2Completed) {
+                // Check for saved progress
+                const progressRef = doc(db, 'users', user.uid, 'quizProgress', 'phase2');
+                const progressDoc = await getDoc(progressRef);
+
+                if (progressDoc.exists() && !progressDoc.data().deleted) {
+                  const savedProgress = progressDoc.data();
+                  console.log('🔄 MainMenu - Reloaded progress:', savedProgress);
+                  console.log('🔄 MainMenu - Reloaded answers array:', savedProgress.answers);
+                  console.log('🔄 MainMenu - Reloaded answers length:', savedProgress.answers?.length || 0);
+                  setPhaseTwoProgress(savedProgress.answers?.length || 0);
+                } else {
+                  console.log('🔄 MainMenu - No progress found on reload, setting to 0');
+                  setPhaseTwoProgress(0);
+                }
+              } else {
+                setPhaseTwoProgress(12); // All questions completed
+              }
+            }
+          } catch (e) {
+            console.error('Erro ao recarregar progresso:', e);
+          }
+        };
+        reloadProgress();
+      } else {
+        console.log('🔄 MainMenu - No timestamp change detected');
+      }
+    };
+
+    // Check immediately when component mounts
+    const initialTimestamp = localStorage.getItem('quizProgressUpdated') || '';
+    console.log('🔄 MainMenu - Initial timestamp check - localStorage:', initialTimestamp);
+    console.log('🔄 MainMenu - Initial timestamp check - last checked:', lastCheckedTimestamp.current);
+
+    if (initialTimestamp !== lastCheckedTimestamp.current) {
+      console.log('🔄 MainMenu - Initial timestamp differs, triggering reload');
+      checkProgressUpdate();
+    } else {
+      console.log('🔄 MainMenu - Initial timestamp matches, no reload needed');
+    }
+
+    // Check every 2 seconds (reduced frequency to avoid spam)
+    const interval = setInterval(checkProgressUpdate, 2000);
+
+    return () => clearInterval(interval);
+  }, []); // No dependencies to prevent infinite loop
 
   const loadNotifications = async () => {
     try {
@@ -214,8 +316,12 @@ export function MainMenu({ userData, onNavigate }: MainMenuProps) {
 
   const handleLogout = async () => {
     try {
+      console.log('🚪 MainMenu - Iniciando logout');
       await signOut(auth);
-      onNavigate('auth');
+      console.log('🚪 MainMenu - Logout do Firebase realizado com sucesso');
+      // Limpar localStorage e redirecionar para a página inicial
+      localStorage.clear();
+      window.location.href = '/';
     } catch (e) {
       console.error('Erro ao deslogar:', e);
     }
@@ -243,7 +349,7 @@ export function MainMenu({ userData, onNavigate }: MainMenuProps) {
                 />
               ) : (
                 <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center">
-                  <span className="text-3xl">{userData.avatar}</span>
+                  <span className="text-sm text-gray-700">...</span>
                 </div>
               )}
               <div className="text-left">
