@@ -1,0 +1,92 @@
+/* Header moderno, simples e responsivo */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(6px);
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  transition: box-shadow .18s, padding .18s, background .18s;
+}
+
+.site-header.sticky {
+  box-shadow: 0 8px 28px rgba(0,0,0,0.08);
+  padding: 8px 18px;
+}
+
+.site-header .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-header .brand .logo-dot {
+  width: 14px;
+  height: 14px;
+  background: #FFC300;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(255,195,0,0.25);
+}
+
+.site-header .brand .title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.site-header .nav {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.site-header .nav a {
+  color: #222;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: background .12s, transform .08s;
+}
+
+.site-header .nav a:hover {
+  background: rgba(255,195,0,0.08);
+  transform: translateY(-1px);
+}
+
+.site-header .nav a.active {
+  background: rgba(255,195,0,0.18);
+  color: #000;
+}
+
+.nav-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .site-header { padding: 10px 14px; }
+  .site-header .nav { display: none; }
+  .nav-toggle { display: inline-flex; align-items:center; justify-content:center; }
+  .site-header.open .nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    background: rgba(255,255,255,0.98);
+    padding: 12px 18px 18px;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+}

@@ -128,8 +128,8 @@ export function ResultScreen({ userData, score, totalQuestions, onRestart, onCon
                 size={64}
               />
             ) : (
-              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center">
-                <span className="text-3xl">{userData.avatar}</span>
+              <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center">
+                <img src="/landpage/LOGO.jpeg" alt="Logo Raízes" className="w-full h-full object-cover" />
               </div>
             )}
             <div className="text-left">

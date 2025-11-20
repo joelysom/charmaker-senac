@@ -140,13 +140,8 @@ export default function SaveButton({
         onDone({ avatar: `${gender}-${selectedHair}` })
       }
 
-      setTimeout(() => {
-        try {
-          navigate('/', { replace: true })
-        } catch (error) {
-          window.location.href = '/'
-        }
-      }, 100)
+      // Não navega mais para landpage - deixa o App.tsx controlar o fluxo
+      // O onDone já vai redirecionar para quizPhaseOne via App.tsx
 
     } catch (e) {
       console.error('🚨 Erro ao salvar personagem:', e)

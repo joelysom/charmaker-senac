@@ -258,19 +258,40 @@ const navigateTo = (step: GameStep, options?: { force?: boolean }) => {
         <Route path="/app" element={appMain} />
         <Route
           path="/home-female"
-          element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quizPhaseOne'); navigateTo('quizPhaseOne'); } })}
+          element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { 
+            if (data?.avatar) {
+              setUserData(prev => ({ ...prev, avatar: data.avatar as string }));
+            }
+            // Redireciona para /app após salvar o personagem
+            window.location.href = '/app';
+          } })}
         />
         <Route
           path="/Female"
-          element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quizPhaseOne'); navigateTo('quizPhaseOne'); } })}
+          element={React.createElement(HomeFemale as any, { onDone: (data: { avatar?: string }) => { 
+            if (data?.avatar) {
+              setUserData(prev => ({ ...prev, avatar: data.avatar as string }));
+            }
+            window.location.href = '/app';
+          } })}
         />
         <Route
           path="/home-male"
-          element={React.createElement(HomeMale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quizPhaseOne'); navigateTo('quizPhaseOne'); } })}
+          element={React.createElement(HomeMale as any, { onDone: (data: { avatar?: string }) => { 
+            if (data?.avatar) {
+              setUserData(prev => ({ ...prev, avatar: data.avatar as string }));
+            }
+            window.location.href = '/app';
+          } })}
         />
         <Route
           path="/Male"
-          element={React.createElement(HomeMale as any, { onDone: (data: { avatar?: string }) => { if (data?.avatar) setUserData(prev => ({ ...prev, avatar: data.avatar as string })); setCurrentStep('quizPhaseOne'); navigateTo('quizPhaseOne'); } })}
+          element={React.createElement(HomeMale as any, { onDone: (data: { avatar?: string }) => { 
+            if (data?.avatar) {
+              setUserData(prev => ({ ...prev, avatar: data.avatar as string }));
+            }
+            window.location.href = '/app';
+          } })}
         />
         <Route path="/admin" element={<AdminPage />} />
       </Routes>

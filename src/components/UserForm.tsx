@@ -3,7 +3,6 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Sprout } from 'lucide-react';
 
 type UserFormProps = {
   onComplete: (name: string, age: number) => void;
@@ -44,8 +43,12 @@ export function UserForm({ onComplete }: UserFormProps) {
     <div className="flex flex-col items-center justify-center min-h-[80vh]">
       <Card className="w-full max-w-md p-8 shadow-xl">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center mb-4">
-            <Sprout className="w-12 h-12 text-gray-900" />
+          <div className="w-20 h-20 rounded-full overflow-hidden mb-4 flex items-center justify-center">
+            <img 
+              src="/landpage/LOGO.jpeg" 
+              alt="Logo Raízes" 
+              className="w-full h-full object-cover"
+            />
           </div>
           <h1 className="text-center text-gray-900 mb-2">
             Raízes

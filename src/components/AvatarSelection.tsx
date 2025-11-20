@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import styles from "./AvatarSelection.module.css";
-import { Sprout } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
@@ -73,8 +72,8 @@ export function AvatarSelection({ userName, onComplete }: AvatarSelectionProps) 
 
       <div className={styles.container }>
         <div className={styles.logo}>
-          <div className="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center">
-            <Sprout className="w-12 h-12 text-gray-900" />
+          <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center">
+            <img src="/landpage/LOGO.jpeg" alt="Logo Raízes" className="w-full h-full object-cover" />
           </div>
         </div>
         <h2 className={styles.title}>Escolha seu Personagem</h2>

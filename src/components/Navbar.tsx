@@ -26,7 +26,17 @@ export default function Navbar({ onNavigate }: NavbarProps): React.ReactElement 
       <div className="navbar-container">
         {/* Logo */}
         <div className="navbar-logo">
-          <a href="/">
+          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <img 
+              src="/landpage/LOGO.jpeg" 
+              alt="Logo Raízes" 
+              style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '50%', 
+                objectFit: 'cover' 
+              }} 
+            />
             <span className="logo-text">RAÍZES</span>
           </a>
         </div>

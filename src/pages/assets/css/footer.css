@@ -1,0 +1,86 @@
+/* Footer moderno, simples e condizente com o tema Setembro Amarelo */
+.site-footer {
+  background: linear-gradient(90deg, #fff8e1 0%, #fffde7 50%, #fff8e1 100%);
+  color: #222;
+  padding: 36px 18px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.site-footer .footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.site-footer .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.site-footer .brand .logo-dot {
+  width: 14px;
+  height: 14px;
+  background: #FFC300; /* amarelo */
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(255,195,0,0.25);
+}
+
+.site-footer .brand .title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #222;
+}
+
+.site-footer .links {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+
+.site-footer .links a {
+  color: #222;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background .18s, color .18s, transform .12s;
+}
+
+.site-footer .links a:hover {
+  background: rgba(255,195,0,0.12);
+  transform: translateY(-2px);
+}
+
+.site-footer .small {
+  font-size: 13px;
+  color: #444;
+}
+
+.site-footer .social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 8px;
+  color: #222;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .site-footer .footer-inner {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  .site-footer .links {
+    justify-content: center;
+  }
+}

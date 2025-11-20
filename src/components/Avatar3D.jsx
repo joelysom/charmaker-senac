@@ -74,8 +74,14 @@ const HAIR_MODELS = {
 }
 
 // ============================================
-// 🧹 UTILITÁRIOS
+// 🧹 UTILITÁRIOS E OTIMIZAÇÕES MOBILE
 // ============================================
+
+// Detecção de dispositivo mobile
+const isMobileDevice = () => {
+  if (typeof window === 'undefined') return false
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+}
 
 function cleanMaterial(material) {
   if (!material) return
@@ -88,8 +94,10 @@ function cleanMaterial(material) {
   })
 }
 
-// Preload de recursos comuns
+// Preload de recursos comuns APENAS em desktop
 const preloadCommonResources = () => {
+  if (isMobileDevice()) return // Não pré-carrega em mobile
+  
   const commonPaths = [
     '/models/female/GBody_0.glb',
     '/models/male/MBody_0.glb',
@@ -128,11 +136,28 @@ function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instan
   const face = useGLTF(facePath)
   const hair = useGLTF(hairPath)
 
-  // Clonagem dos modelos
+  // Clonagem dos modelos com otimizações mobile
   const bodyClone = useMemo(() => {
     if (!body?.scene) return null
     const cloned = clone(body.scene)
     cloned.userData._instanceId = instanceId
+    
+    // Otimização mobile: simplifica geometria
+    if (isMobileDevice()) {
+      cloned.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          child.geometry.computeBoundsTree = null
+          child.frustumCulled = true
+          // Remove atributos desnecessários
+          if (child.geometry.attributes.uv2) {
+            child.geometry.deleteAttribute('uv2')
+          }
+          if (child.geometry.attributes.tangent) {
+            child.geometry.deleteAttribute('tangent')
+          }
+        }
+      })
+    }
     return cloned
   }, [body, instanceId])
 
@@ -140,6 +165,21 @@ function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instan
     if (!face?.scene) return null
     const cloned = clone(face.scene)
     cloned.userData._instanceId = instanceId
+    
+    if (isMobileDevice()) {
+      cloned.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          child.geometry.computeBoundsTree = null
+          child.frustumCulled = true
+          if (child.geometry.attributes.uv2) {
+            child.geometry.deleteAttribute('uv2')
+          }
+          if (child.geometry.attributes.tangent) {
+            child.geometry.deleteAttribute('tangent')
+          }
+        }
+      })
+    }
     return cloned
   }, [face, instanceId])
 
@@ -147,6 +187,22 @@ function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instan
     if (!hair?.scene) return null
     const cloned = clone(hair.scene)
     cloned.userData._instanceId = instanceId
+    
+    if (isMobileDevice()) {
+      cloned.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+          child.geometry.computeBoundsTree = null
+          child.geometry.computeVertexNormals()
+          child.frustumCulled = true
+          if (child.geometry.attributes.uv2) {
+            child.geometry.deleteAttribute('uv2')
+          }
+          if (child.geometry.attributes.tangent) {
+            child.geometry.deleteAttribute('tangent')
+          }
+        }
+      })
+    }
     return cloned
   }, [hair, instanceId])
 
@@ -174,6 +230,27 @@ function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instan
 
     const textureLoader = new THREE.TextureLoader()
     const loadedTextures = []
+    const isMobile = isMobileDevice()
+
+    // Configuração de textura otimizada para mobile
+    const configureTexture = (texture) => {
+      texture.flipY = false
+      texture.colorSpace = THREE.SRGBColorSpace
+      
+      if (isMobile) {
+        // Mobile: qualidade mínima para performance
+        texture.anisotropy = 1
+        texture.generateMipmaps = false
+        texture.minFilter = THREE.LinearFilter
+        texture.magFilter = THREE.LinearFilter
+      } else {
+        // Desktop: qualidade normal
+        texture.anisotropy = 4
+        texture.generateMipmaps = true
+        texture.minFilter = THREE.LinearMipmapLinearFilter
+      }
+      texture.needsUpdate = true
+    }
 
     // Aplicar textura no corpo
     bodyClone.traverse((child) => {
@@ -181,8 +258,7 @@ function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instan
         textureLoader.load(
           bodyTexturePath,
           (texture) => {
-            texture.flipY = false
-            texture.colorSpace = THREE.SRGBColorSpace
+            configureTexture(texture)
             
             const newMaterial = child.material.clone()
             newMaterial.map = texture
@@ -204,8 +280,7 @@ function AvatarPreview({ gender, bodyType, skinColor, faceOption, hairId, instan
         textureLoader.load(
           faceTexturePath,
           (texture) => {
-            texture.flipY = false
-            texture.colorSpace = THREE.SRGBColorSpace
+            configureTexture(texture)
             
             const newMaterial = child.material.clone()
             newMaterial.map = texture
@@ -268,6 +343,7 @@ export default function Avatar3D({
 }) {
   const instanceId = useRef(Math.random()).current
   const avatarKey = `${gender}-${bodyType}-${skinColor}-${faceOption}-${hairId}-${instanceId}`
+  const isMobile = useMemo(() => isMobileDevice(), [])
 
   const modelPresets = gender === 'female' ? {
     position: [0, -0.169, 0],
@@ -306,12 +382,19 @@ export default function Avatar3D({
           <Canvas
             key={avatarKey}
             style={{ width: '100%', height: '100%' }}
-            gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-            onCreated={(state) => state.gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25))}
+            gl={{ 
+              antialias: !isMobile, 
+              alpha: true, 
+              powerPreference: isMobile ? 'low-power' : 'high-performance',
+              stencil: false,
+              depth: true
+            }}
+            dpr={isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 1.5)}
+            performance={{ min: 0.5 }}
           >
             <CameraController cameraDistance={modelPresets.cameraDistance} />
-            <ambientLight intensity={1.2} />
-            <directionalLight position={[5, 5, 5]} intensity={1} />
+            <ambientLight intensity={isMobile ? 1.5 : 1.2} />
+            {!isMobile && <directionalLight position={[5, 5, 5]} intensity={1} />}
             <group 
               position={modelPresets.position} 
               rotation={modelPresets.rotation} 
