@@ -9,6 +9,9 @@ const Index: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [modalOpen, setModalOpen] = useState<number | null>(null);
   const [currentUniversidadeImage, setCurrentUniversidadeImage] = useState(0);
+  const [currentAvatarImage, setCurrentAvatarImage] = useState(0);
+  const [currentQuizImage, setCurrentQuizImage] = useState(0);
+  const [currentComunidadeImage, setCurrentComunidadeImage] = useState(0);
 
   const slides = Array.from({ length: 9 }, (_, i) => i);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -36,6 +39,30 @@ const Index: React.FC = () => {
     }, 4000);
     return () => clearInterval(interval);
   }, [universidadeImages.length]);
+
+  // Autoplay avatar images
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentAvatarImage(prev => (prev + 1) % 5); // 0 to 4
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Autoplay quiz images
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentQuizImage(prev => (prev + 1) % 3); // 0 to 2
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Autoplay comunidade images
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentComunidadeImage(prev => (prev + 1) % 4); // 0 to 3
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Text truncation
   useEffect(() => {
@@ -280,19 +307,58 @@ Empoderamento: Fortalecer identidades e estimular protagonismo individual e cole
             </p>
             <div className="gamificacao-grid">
               <div className="gamificacao-card">
-                <div className="gamificacao-icon"></div>
+                <div className="gamificacao-avatar-slideshow">
+                  {[0, 1, 2, 3, 4].map((index) => (
+                    <img
+                      key={index}
+                      src={`/landpage/gami/avatar_${index}.PNG`}
+                      alt={`Avatar ${index}`}
+                      className={`gamificacao-avatar-slide ${index === currentAvatarImage ? 'active' : ''}`}
+                      onError={(e) => {
+                        console.log(`Imagem não encontrada: /landpage/gami/avatar_${index}.PNG`);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ))}
+                </div>
                 <h3>Crie seu Avatar</h3>
                 <p>Crie seu Avatar na gamificação, do seu jeito da forma como você se enxerga!</p>
                 <img src="/landpage/characters/avatar.png" alt="Avatar" className="gamificacao-character" />
               </div>
               <div className="gamificacao-card">
-                <div className="gamificacao-icon"></div>
+                <div className="gamificacao-quiz-slideshow">
+                  {[0, 1, 2].map((index) => (
+                    <img
+                      key={index}
+                      src={`/landpage/gami/Quiz_${index}.PNG`}
+                      alt={`Quiz ${index}`}
+                      className={`gamificacao-quiz-slide ${index === currentQuizImage ? 'active' : ''}`}
+                      onError={(e) => {
+                        console.log(`Imagem não encontrada: /landpage/gami/Quiz_${index}.PNG`);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ))}
+                </div>
                 <h3>Quiz</h3>
                 <p>Participe do quiz da comunidade! Aprenda como combater o racismo e lidar com situações.</p>
                 <img src="/landpage/characters/Quiz.png" alt="Quiz" className="gamificacao-character" />
               </div>
               <div className="gamificacao-card">
-                <div className="gamificacao-icon"></div>
+                <div className="gamificacao-comunidade-slideshow">
+                  {[0, 1, 2, 3].map((index) => (
+                    <img
+                      key={index}
+                      src={`/landpage/gami/comunidade_${index}.PNG`}
+                      alt={`Comunidade ${index}`}
+                      className={`gamificacao-comunidade-slide ${index === currentComunidadeImage ? 'active' : ''}`}
+                      onError={(e) => {
+                        console.log(`Imagem não encontrada: /landpage/gami/comunidade_${index}.PNG`);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ))}
+                </div>
                 <h3>Comunidade</h3>
                 <p>Acesse nossa comunidade, compartilhe sua historia e o que achou do nosso projeto e evento!</p>
                 <img src="/landpage/characters/comunidade.png" alt="Comunidade" className="gamificacao-character" />

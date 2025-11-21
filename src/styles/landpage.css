@@ -362,6 +362,7 @@
   text-align: center;
   position: relative;
   padding-bottom: 400px; /* space for img */
+  overflow: hidden; /* to contain the slideshow */
 }
 
 .landpage-wrapper .gamificacao-card:hover {
@@ -369,30 +370,112 @@
   box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
 }
 
-.landpage-wrapper .gamificacao-icon {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, var(--landpage-blue) 0%, var(--landpage-yellow) 100%);
-  border-radius: 50%;
-  margin: 0 auto 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
+.landpage-wrapper .gamificacao-avatar-slideshow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  border-radius: 16px;
+}
+
+.landpage-wrapper .gamificacao-avatar-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.landpage-wrapper .gamificacao-avatar-slide.active {
+  opacity: 1;
+}
+
+.landpage-wrapper .gamificacao-quiz-slideshow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  border-radius: 16px;
+}
+
+.landpage-wrapper .gamificacao-quiz-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.landpage-wrapper .gamificacao-quiz-slide.active {
+  opacity: 1;
+}
+
+/* Comunidade Slideshow */
+.landpage-wrapper .gamificacao-comunidade-slideshow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.landpage-wrapper .gamificacao-comunidade-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  border-radius: 16px;
+}
+
+.landpage-wrapper .gamificacao-comunidade-slide.active {
+  opacity: 1;
+}
+
+.landpage-wrapper .gamificacao-card h3,
+.landpage-wrapper .gamificacao-card p {
+  position: relative;
+  z-index: 2;
   color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
 }
 
 .landpage-wrapper .gamificacao-card h3 {
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 15px;
-  color: var(--landpage-text-dark);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px 15px;
+  border-radius: 8px;
+  display: inline-block;
 }
 
 .landpage-wrapper .gamificacao-card p {
   font-size: 16px;
   line-height: 1.6;
-  color: var(--landpage-text-light);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 15px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 20px;
 }
 
 .landpage-wrapper .gamificacao-character {
@@ -406,6 +489,7 @@
   border-radius: 12px;
   filter: drop-shadow(0 0 20px rgba(248, 180, 0, 0.5));
   transition: filter 0.3s ease;
+  z-index: 3;
 }
 
 .landpage-wrapper .gamificacao-character:hover {
@@ -554,20 +638,52 @@
   .landpage-wrapper .gamificacao-card {
     padding: 30px 20px 0;
     padding-bottom: 350px;
+    overflow: hidden;
   }
 
-  .landpage-wrapper .gamificacao-character {
-    max-width: 1000px;
+  .landpage-wrapper .gamificacao-avatar-slideshow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    border-radius: 16px;
   }
 
-  .landpage-wrapper .gamificacao-icon {
-    width: 60px;
-    height: 60px;
-    font-size: 24px;
+  .landpage-wrapper .gamificacao-card h3,
+  .landpage-wrapper .gamificacao-card p {
+    position: relative;
+    z-index: 2;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
   }
 
   .landpage-wrapper .gamificacao-card h3 {
     font-size: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+
+  .landpage-wrapper .gamificacao-card p {
+    font-size: 14px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 10px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+
+  .landpage-wrapper .gamificacao-quiz-slideshow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    border-radius: 16px;
   }
 
   .landpage-wrapper .gamificacao-cta {
@@ -644,20 +760,52 @@
   .landpage-wrapper .gamificacao-card {
     padding: 20px 15px 0;
     padding-bottom: 300px;
+    overflow: hidden;
   }
 
-  .landpage-wrapper .gamificacao-character {
-    max-width: 750px;
+  .landpage-wrapper .gamificacao-avatar-slideshow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    border-radius: 16px;
   }
 
-  .landpage-wrapper .gamificacao-icon {
-    width: 50px;
-    height: 50px;
-    font-size: 20px;
+  .landpage-wrapper .gamificacao-card h3,
+  .landpage-wrapper .gamificacao-card p {
+    position: relative;
+    z-index: 2;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
   }
 
   .landpage-wrapper .gamificacao-card h3 {
     font-size: 18px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+
+  .landpage-wrapper .gamificacao-card p {
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .landpage-wrapper .gamificacao-quiz-slideshow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    border-radius: 16px;
   }
 
   .landpage-wrapper .gamificacao-cta {
@@ -675,7 +823,8 @@
   }
 
   .landpage-wrapper .gamificacao-character {
-    max-width: 750px;
+    max-width: 1000px;
+    z-index: 3;
   }
 
   .landpage-wrapper .causa-rectangle {
