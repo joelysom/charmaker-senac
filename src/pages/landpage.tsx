@@ -14,19 +14,14 @@ const Index: React.FC = () => {
   const [currentComunidadeImage, setCurrentComunidadeImage] = useState(0);
 
   const [currentTeamImage, setCurrentTeamImage] = useState(0);
-  const [isTeamPaused, setIsTeamPaused] = useState(false);
 
   const [currentLogisticsImage, setCurrentLogisticsImage] = useState(0);
-  const [isLogisticsPaused, setIsLogisticsPaused] = useState(false);
 
   const [currentVolunteersImage, setCurrentVolunteersImage] = useState(0);
-  const [isVolunteersPaused, setIsVolunteersPaused] = useState(false);
 
   const [currentInstructorsImage, setCurrentInstructorsImage] = useState(0);
-  const [isInstructorsPaused, setIsInstructorsPaused] = useState(false);
 
   const [currentCoordinationImage, setCurrentCoordinationImage] = useState(0);
-  const [isCoordinationPaused, setIsCoordinationPaused] = useState(false);
 
   const slides = Array.from({ length: 9 }, (_, i) => i);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -69,7 +64,8 @@ const Index: React.FC = () => {
   ];
 
   const coordinationMembers = [
-    { src: '/landpage/grupos/19.jpg', name: 'Mere Coutinho', role: '' }
+    { src: '/landpage/grupos/19.jpg', name: 'Mere Coutinho', role: '' },
+    { src: '/landpage/grupos/27.jpeg', name: 'Carol Lima', role: '' }
   ];
 
   // Autoplay slider
@@ -114,53 +110,43 @@ const Index: React.FC = () => {
 
   // Autoplay team images
   useEffect(() => {
-    if (!isTeamPaused) {
-      const interval = setInterval(() => {
-        setCurrentTeamImage(prev => (prev + 1) % teamMembers.length);
-      }, 4000);
-      return () => clearInterval(interval);
-    }
-  }, [isTeamPaused, teamMembers.length]);
+    const interval = setInterval(() => {
+      setCurrentTeamImage(prev => (prev + 1) % teamMembers.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [teamMembers.length]);
 
   // Autoplay logistics images
   useEffect(() => {
-    if (!isLogisticsPaused) {
-      const interval = setInterval(() => {
-        setCurrentLogisticsImage(prev => (prev + 1) % logisticsMembers.length);
-      }, 4000);
-      return () => clearInterval(interval);
-    }
-  }, [isLogisticsPaused, logisticsMembers.length]);
+    const interval = setInterval(() => {
+      setCurrentLogisticsImage(prev => (prev + 1) % logisticsMembers.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [logisticsMembers.length]);
 
   // Autoplay volunteers images
   useEffect(() => {
-    if (!isVolunteersPaused) {
-      const interval = setInterval(() => {
-        setCurrentVolunteersImage(prev => (prev + 1) % volunteersMembers.length);
-      }, 4000);
-      return () => clearInterval(interval);
-    }
-  }, [isVolunteersPaused, volunteersMembers.length]);
+    const interval = setInterval(() => {
+      setCurrentVolunteersImage(prev => (prev + 1) % volunteersMembers.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [volunteersMembers.length]);
 
   // Autoplay instructors images
   useEffect(() => {
-    if (!isInstructorsPaused) {
-      const interval = setInterval(() => {
-        setCurrentInstructorsImage(prev => (prev + 1) % instructorsMembers.length);
-      }, 4000);
-      return () => clearInterval(interval);
-    }
-  }, [isInstructorsPaused, instructorsMembers.length]);
+    const interval = setInterval(() => {
+      setCurrentInstructorsImage(prev => (prev + 1) % instructorsMembers.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [instructorsMembers.length]);
 
   // Autoplay coordination images
   useEffect(() => {
-    if (!isCoordinationPaused) {
-      const interval = setInterval(() => {
-        setCurrentCoordinationImage(prev => (prev + 1) % coordinationMembers.length);
-      }, 4000);
-      return () => clearInterval(interval);
-    }
-  }, [isCoordinationPaused, coordinationMembers.length]);
+    const interval = setInterval(() => {
+      setCurrentCoordinationImage(prev => (prev + 1) % coordinationMembers.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [coordinationMembers.length]);
 
   // Text truncation
   useEffect(() => {
@@ -397,10 +383,6 @@ Empoderamento: Fortalecer identidades e estimular protagonismo individual e cole
                         src={member.src}
                         alt={member.name}
                         className={`equipe-slide ${index === currentLogisticsImage ? 'active' : ''}`}
-                        onMouseEnter={() => setIsLogisticsPaused(true)}
-                        onMouseLeave={() => setIsLogisticsPaused(false)}
-                        onClick={() => setCurrentLogisticsImage((prev) => (prev + 1) % logisticsMembers.length)}
-                        style={{ cursor: 'pointer' }}
                         onError={(e) => {
                           console.log(`Imagem não encontrada: ${member.src}`);
                           e.currentTarget.style.display = 'none';
@@ -423,10 +405,6 @@ Empoderamento: Fortalecer identidades e estimular protagonismo individual e cole
                         src={member.src}
                         alt={member.name}
                         className={`equipe-slide ${index === currentTeamImage ? 'active' : ''}`}
-                        onMouseEnter={() => setIsTeamPaused(true)}
-                        onMouseLeave={() => setIsTeamPaused(false)}
-                        onClick={() => setCurrentTeamImage((prev) => (prev + 1) % teamMembers.length)}
-                        style={{ cursor: 'pointer' }}
                         onError={(e) => {
                           console.log(`Imagem não encontrada: ${member.src}`);
                           e.currentTarget.style.display = 'none';
@@ -449,10 +427,6 @@ Empoderamento: Fortalecer identidades e estimular protagonismo individual e cole
                         src={member.src}
                         alt={member.name}
                         className={`equipe-slide ${index === currentVolunteersImage ? 'active' : ''}`}
-                        onMouseEnter={() => setIsVolunteersPaused(true)}
-                        onMouseLeave={() => setIsVolunteersPaused(false)}
-                        onClick={() => setCurrentVolunteersImage((prev) => (prev + 1) % volunteersMembers.length)}
-                        style={{ cursor: 'pointer' }}
                         onError={(e) => {
                           console.log(`Imagem não encontrada: ${member.src}`);
                           e.currentTarget.style.display = 'none';
@@ -475,10 +449,6 @@ Empoderamento: Fortalecer identidades e estimular protagonismo individual e cole
                         src={member.src}
                         alt={member.name}
                         className={`equipe-slide ${index === currentInstructorsImage ? 'active' : ''}`}
-                        onMouseEnter={() => setIsInstructorsPaused(true)}
-                        onMouseLeave={() => setIsInstructorsPaused(false)}
-                        onClick={() => setCurrentInstructorsImage((prev) => (prev + 1) % instructorsMembers.length)}
-                        style={{ cursor: 'pointer' }}
                         onError={(e) => {
                           console.log(`Imagem não encontrada: ${member.src}`);
                           e.currentTarget.style.display = 'none';
@@ -501,10 +471,6 @@ Empoderamento: Fortalecer identidades e estimular protagonismo individual e cole
                         src={member.src}
                         alt={member.name}
                         className={`equipe-slide ${index === currentCoordinationImage ? 'active' : ''}`}
-                        onMouseEnter={() => setIsCoordinationPaused(true)}
-                        onMouseLeave={() => setIsCoordinationPaused(false)}
-                        onClick={() => setCurrentCoordinationImage((prev) => (prev + 1) % coordinationMembers.length)}
-                        style={{ cursor: 'pointer' }}
                         onError={(e) => {
                           console.log(`Imagem não encontrada: ${member.src}`);
                           e.currentTarget.style.display = 'none';

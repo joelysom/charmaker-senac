@@ -562,9 +562,9 @@
   display: inline-block;
   background: var(--landpage-yellow);
   color: #000;
-  padding: 15px 40px;
+  padding: 25px 60px;
   border-radius: 50px;
-  font-size: 18px;
+  font-size: 26px;
   font-weight: 800;
   text-transform: uppercase;
   text-decoration: none;
@@ -746,8 +746,8 @@
   }
 
   .landpage-wrapper .gamificacao-btn {
-    padding: 12px 30px;
-    font-size: 16px;
+    padding: 20px 50px;
+    font-size: 24px;
   }
 
   .landpage-wrapper .gamificacao-character {
@@ -878,8 +878,8 @@
   }
 
   .landpage-wrapper .gamificacao-btn {
-    padding: 10px 25px;
-    font-size: 14px;
+    padding: 18px 45px;
+    font-size: 22px;
   }
 
   .landpage-wrapper .gamificacao-character {
